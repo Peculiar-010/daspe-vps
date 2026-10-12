@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Awaiting Approval — Daspe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+<style>
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.pending-wrap{width:100%;max-width:400px;text-align:center}
+.pending-card{background:var(--black-2);border:1px solid var(--border);border-radius:var(--radius-xl);padding:36px 28px}
+.icon-wrap{width:56px;height:56px;border-radius:16px;background:var(--warning-bg);border:1px solid rgba(251,191,36,.2);display:grid;place-items:center;margin:0 auto 20px}
+.icon-wrap svg{width:28px;height:28px;stroke:var(--warning);fill:none;stroke-width:1.5}
+.pending-card h1{font-size:1.3rem;font-weight:800;letter-spacing:-.03em;margin-bottom:10px}
+.pending-card p{font-size:.88rem;color:var(--white-4);line-height:1.6;margin-bottom:24px}
+.user-chip-lg{display:flex;align-items:center;gap:12px;background:var(--black-3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:20px;text-align:left}
+.user-chip-lg img{width:40px;height:40px;border-radius:50%;background:var(--black-5)}
+.user-chip-lg-name{font-weight:700;font-size:.9rem}
+.user-chip-lg-sub{font-size:.75rem;color:var(--white-4);margin-top:2px}
+.push-cta{background:var(--black-3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:20px}
+.push-cta p{font-size:.82rem;color:var(--white-4);margin-bottom:12px}
+.push-cta .push-ok{font-size:.82rem;color:var(--success);display:none;align-items:center;gap:6px}
+.push-cta .push-ok svg{width:14px;height:14px;stroke:var(--success);fill:none;stroke-width:2}
+</style>
+</head>
+<body>
+<div class="pending-wrap">
+  <div class="pending-card">
+    <div class="icon-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <h1>Under Review</h1>
+    <p>Your account has been submitted and is pending manual review. You will be notified once approved.</p>
+    <div class="user-chip-lg" id="userChip" style="display:none">
+      <img id="userAvatar" src="" alt=""/>
+      <div><div class="user-chip-lg-name" id="userName"></div><div class="user-chip-lg-sub" id="userEmail"></div></div>
+    </div>
+    <div class="push-cta">
+      <p>Enable notifications to get alerted the moment your account is approved, even without this page open.</p>
+      <button class="btn btn-primary w-full" id="pushBtn" style="margin-bottom:0">Enable Notifications</button>
+      <div class="push-ok" id="pushOk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Notifications enabled</div>
+    </div>
+    <button class="btn btn-ghost w-full btn-sm" onclick="logout()">Sign out</button>
+  </div>
+</div>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/push.js"></script>
+<script>
+async function init() {
+  const user = await checkAuth('/');
+  if (!user) return;
+  if (user.status === 'active') return window.location.href = user.role === 'admin' ? '/admin/' : '/dashboard/';
+  document.getElementById('userChip').style.display = 'flex';
+  document.getElementById('userAvatar').src = user.avatar || '';
+  document.getElementById('userName').textContent = user.username;
+  document.getElementById('userEmail').textContent = user.email || '';
+  if (user.pushEnabled) { document.getElementById('pushBtn').style.display = 'none'; document.getElementById('pushOk').style.display = 'flex'; }
+}
+document.getElementById('pushBtn').onclick = async () => {
+  const ok = await registerPush();
+  if (ok) { document.getElementById('pushBtn').style.display = 'none'; document.getElementById('pushOk').style.display = 'flex'; toast.success('Notifications enabled'); }
+  else toast.error('Could not enable notifications');
+};
+async function logout() { await api.post('/auth/logout'); window.location.href = '/'; }
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GitHub Repos — Daspe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a href="/dashboard/" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="/dashboard/deployments.html" class="nav-item"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>Deployments</a>
+    <div class="nav-section">Tools</div>
+    <a href="/dashboard/files.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+    <a href="/dashboard/repos.html" class="nav-item active"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7"/></svg>GitHub Repos</a>
+    <div class="nav-section">Account</div>
+    <a href="/dashboard/notifications.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>Notifications<span class="nav-badge" id="sideNotifBadge" style="display:none">0</span></a>
+    <a href="/dashboard/settings.html" class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Settings</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer"><div class="user-chip"><img class="avatar" id="sidebarAvatar" src="" alt=""/><div class="user-chip-info"><div class="user-chip-name" id="sidebarName">...</div><div class="user-chip-sub">Member</div></div></div></div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title">GitHub Repositories</span>
+    <div class="topbar-actions"><input type="text" id="repoSearch" placeholder="Search repos..." style="width:200px" oninput="filterRepos()"/></div>
+  </div>
+  <div class="content">
+    <div class="page-header"><h1 class="page-title">GitHub Repositories</h1><p class="page-sub">Select a repo to create a new deployment from it</p></div>
+    <div id="reposGrid"><div class="loading"><div class="spin"></div>Fetching your repositories from GitHub</div></div>
+  </div>
+</div>
+</div>
+<script src="/assets/js/app.js"></script>
+<script>
+let allRepos = [];
+async function init() {
+  const user = await checkAuth('/');
+  if (!user || user.status !== 'active') return window.location.href = '/';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  initSidebar();
+  updateNotifBadge();
+  try {
+    allRepos = await api.get('/api/user/github/repos');
+    render(allRepos);
+  } catch(e) { document.getElementById('reposGrid').innerHTML = `<div class="empty"><h3>Could not load repositories</h3><p>${e.message}</p></div>`; }
+}
+function render(repos) {
+  if (!repos.length) { document.getElementById('reposGrid').innerHTML = '<div class="empty"><h3>No repositories found</h3></div>'; return; }
+  document.getElementById('reposGrid').innerHTML = `<div class="deps-grid">${repos.map(r => `
+    <div class="dep-card" onclick="deploy('${r.full_name}','${r.default_branch}')">
+      <div class="dep-card-top">
+        <div><div class="dep-name">${r.name}</div><div class="dep-type">${r.full_name}</div></div>
+        <span class="badge ${r.private ? 'badge-stopped' : 'badge-active'}">${r.private ? 'Private' : 'Public'}</span>
+      </div>
+      ${r.description ? `<div class="text-sm text-muted" style="margin-bottom:10px">${r.description.slice(0,80)}</div>` : ''}
+      <div class="dep-tags">${r.language ? `<span class="tag">${r.language}</span>` : ''}<span class="tag">${r.default_branch}</span></div>
+      <div class="dep-foot"><span>Updated ${fmt.ago(r.updated_at)}</span><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();deploy('${r.full_name}','${r.default_branch}')">Deploy</button></div>
+    </div>`).join('')}</div>`;
+}
+function filterRepos() {
+  const q = document.getElementById('repoSearch').value.toLowerCase();
+  render(allRepos.filter(r => r.name.toLowerCase().includes(q) || (r.description||'').toLowerCase().includes(q)));
+}
+function deploy(fullName, branch) {
+  const name = fullName.split('/')[1];
+  const subdomain = name.toLowerCase().replace(/[^a-z0-9]/g,'-');
+  window.location.href = `/dashboard/deployments.html?new=1&repo=${encodeURIComponent(fullName)}&branch=${branch}&name=${name}&subdomain=${subdomain}`;
+}
+init();
+</script>
+</body>
+</html>

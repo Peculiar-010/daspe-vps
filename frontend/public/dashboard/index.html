@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dashboard — Daspe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+</head>
+<body>
+<div class="app">
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a id="nav-dash" href="/dashboard/" class="nav-item active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a id="nav-deps" href="/dashboard/deployments.html" class="nav-item"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Deployments</a>
+    <div class="nav-section">Tools</div>
+    <a id="nav-files" href="/dashboard/files.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+    <a id="nav-repos" href="/dashboard/repos.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>GitHub Repos</a>
+    <div class="nav-section">Account</div>
+    <a id="nav-notifs" href="/dashboard/notifications.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span class="nav-badge" id="sideNotifBadge" style="display:none">0</span></a>
+    <a id="nav-settings" href="/dashboard/settings.html" class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Settings</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip" onclick="window.location='/dashboard/settings.html'">
+      <img class="avatar" id="sidebarAvatar" src="" alt=""/>
+      <div class="user-chip-info"><div class="user-chip-name" id="sidebarName">...</div><div class="user-chip-sub">Member</div></div>
+    </div>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title">Dashboard</span>
+    <div class="topbar-actions">
+      <div class="notif-wrap">
+        <button class="btn btn-ghost btn-sm btn-icon notif-trigger" id="notifBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-dot" id="notifDot"></span></button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="notif-ph"><span>Notifications</span><button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark all read</button></div>
+          <div class="notif-list-inner" id="notifList"><div class="notif-empty">No notifications yet</div></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="window.location='/dashboard/deployments.html?new=1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Deployment</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <h1 class="page-title" id="welcomeTitle">Welcome back</h1>
+      <p class="page-sub">Here is what is happening with your deployments</p>
+    </div>
+
+    <div class="stats-row" id="statsRow"><div class="loading"><div class="spin"></div>Loading stats</div></div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:24px" id="midGrid">
+      <div class="card">
+        <div class="section-hd"><h3>Resource Usage</h3><span class="text-xs text-muted" id="resUpdated"></span></div>
+        <div id="resBars"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="section-hd"><h3>Quick Actions</h3></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-ghost w-full" onclick="window.location='/dashboard/deployments.html?new=1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>New Deployment</button>
+          <button class="btn btn-ghost w-full" onclick="window.location='/dashboard/files.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Upload Files</button>
+          <button class="btn btn-ghost w-full" onclick="window.location='/dashboard/repos.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7"/></svg>Connect GitHub</button>
+          <button class="btn btn-ghost w-full" onclick="window.location='/dashboard/notifications.html'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>Notifications</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-hd">
+      <h3>Recent Deployments</h3>
+      <a href="/dashboard/deployments.html" class="btn btn-ghost btn-sm">View all</a>
+    </div>
+    <div id="depsContainer"><div class="loading"><div class="spin"></div>Loading deployments</div></div>
+  </div>
+</div>
+</div>
+
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/push.js"></script>
+<script>
+let user = null;
+const BASE = location.hostname.replace(/^dashboard\./,'');
+
+async function init() {
+  user = await checkAuth('/');
+  if (!user) return;
+  if (user.status !== 'active') return window.location.href = '/pending.html';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  document.getElementById('welcomeTitle').textContent = 'Welcome, ' + user.username;
+  initSidebar('nav-dash');
+  await Promise.all([loadStats(), loadDeps(), loadNotifs()]);
+  updateNotifBadge();
+  if (!user.pushEnabled && 'Notification' in window && Notification.permission === 'default') {
+    setTimeout(async () => { const ok = await registerPush(); if (ok) toast.success('Notifications enabled'); }, 4000);
+  }
+}
+
+async function loadStats() {
+  try {
+    const [res, deps] = await Promise.all([api.get('/api/user/resources'), api.get('/api/deployments')]);
+    const running = deps.filter(d => d.status === 'running').length;
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat-box"><div class="stat-box-label">Total Deployments</div><div class="stat-box-value">${deps.length}</div><div class="stat-box-sub">Across all types</div></div>
+      <div class="stat-box"><div class="stat-box-label">Running Now</div><div class="stat-box-value" style="color:var(--success)">${running}</div><div class="stat-box-sub">${deps.length - running} stopped</div></div>
+      <div class="stat-box"><div class="stat-box-label">RAM Limit</div><div class="stat-box-value">${res.ram.limit_mb} MB</div><div class="stat-box-sub">${res.ram.available_mb} MB available</div></div>
+      <div class="stat-box"><div class="stat-box-label">Storage</div><div class="stat-box-value">${fmt.mb(res.storage.used_mb)}</div><div class="stat-box-sub">of ${fmt.mb(res.storage.limit_mb)}</div></div>`;
+    document.getElementById('resBars').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${resBar(res.ram.live_used_mb, res.ram.limit_mb, 'RAM — Live Usage')}
+        ${resBar(res.ram.allocated_mb, res.ram.limit_mb, 'RAM — Allocated')}
+        ${resBar(res.storage.used_mb, res.storage.limit_mb, 'Storage')}
+      </div>`;
+    document.getElementById('resUpdated').textContent = 'Updated just now';
+  } catch(e) { toast.error(e.message); }
+}
+
+async function loadDeps() {
+  try {
+    const deps = await api.get('/api/deployments');
+    if (!deps.length) {
+      document.getElementById('depsContainer').innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><h3>No deployments yet</h3><p>Deploy your first project in minutes</p><button class="btn btn-primary" onclick="window.location='/dashboard/deployments.html?new=1'">Create Deployment</button></div>`;
+      return;
+    }
+    document.getElementById('depsContainer').innerHTML = `<div class="deps-grid">${deps.slice(0,6).map(depCard).join('')}</div>`;
+  } catch(e) { document.getElementById('depsContainer').innerHTML = `<div class="empty"><p class="text-danger">${e.message}</p></div>`; }
+}
+
+function depCard(d) {
+  const domain = `${d.subdomain}.${BASE}`;
+  return `<a class="dep-card" href="/dashboard/deployment.html?id=${d.id}">
+    <div class="dep-card-top"><div><div class="dep-name">${d.name}</div><div class="dep-type">${fmt.runtime(d.runtime)} &middot; ${d.type}</div></div>${fmt.badge(d.status)}</div>
+    <div class="dep-url">${domain}</div>
+    <div class="dep-tags">${d.github_repo?`<span class="tag">${d.github_repo.split('/')[1]}</span>`:''}<span class="tag">${d.ram_limit_mb} MB</span>${d.auto_deploy?'<span class="tag">Auto Deploy</span>':''}</div>
+    <div class="dep-foot"><span>${d.deployed_at ? fmt.ago(d.deployed_at) : 'Not deployed'}</span>${d.live_ram_mb?`<span>${d.live_ram_mb.toFixed(0)} MB RAM</span>`:''}</div>
+  </a>`;
+}
+
+async function loadNotifs() {
+  try {
+    const list = await api.get('/api/user/notifications');
+    const el = document.getElementById('notifList');
+    if (!list.length) { el.innerHTML = '<div class="notif-empty">No notifications yet</div>'; return; }
+    el.innerHTML = list.slice(0,10).map(n => `<div class="notif-item ${n.read?'':'unread'}" onclick="goNotif('${n.id}','${n.deployment_id||''}')"><div class="notif-item-title">${n.title}</div><div class="notif-item-body">${n.body}</div><div class="notif-item-time">${fmt.ago(n.created_at)}</div></div>`).join('');
+  } catch {}
+}
+async function goNotif(id, depId) {
+  await api.patch(`/api/user/notifications/${id}/read`).catch(()=>{});
+  updateNotifBadge();
+  document.getElementById('notifPanel').classList.remove('open');
+  if (depId) window.location.href = `/dashboard/deployment.html?id=${depId}`;
+}
+async function markAllRead() {
+  await api.post('/api/user/notifications/read-all');
+  loadNotifs(); updateNotifBadge(); toast.success('All marked as read');
+}
+
+document.getElementById('notifBtn').onclick = e => { e.stopPropagation(); document.getElementById('notifPanel').classList.toggle('open'); loadNotifs(); };
+document.addEventListener('click', () => document.getElementById('notifPanel')?.classList.remove('open'));
+init();
+</script>
+</body>
+</html>

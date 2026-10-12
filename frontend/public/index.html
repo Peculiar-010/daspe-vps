@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Daspe — Deploy Anything. Own Everything.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#000;
+  --black-1:#080808;
+  --black-2:#0e0e0e;
+  --black-3:#141414;
+  --black-4:#1a1a1a;
+  --black-5:#222;
+  --white:#fff;
+  --white-2:rgba(255,255,255,.85);
+  --white-3:rgba(255,255,255,.5);
+  --white-4:rgba(255,255,255,.25);
+  --white-5:rgba(255,255,255,.06);
+  --white-6:rgba(255,255,255,.03);
+  --border:rgba(255,255,255,.08);
+  --border-2:rgba(255,255,255,.12);
+  --font:'Inter',sans-serif;
+  --radius:10px;
+  --radius-lg:16px;
+  --radius-xl:24px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  font-family:var(--font);
+  background:var(--black);
+  color:var(--white);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a{text-decoration:none;color:inherit}
+img{max-width:100%}
+button{font-family:var(--font);cursor:pointer}
+
+/* ── GLOW SPOTS ────────────────────────────────────────────── */
+.glow{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  filter:blur(80px);
+  opacity:.18;
+}
+.glow-hero-1{
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(255,255,255,.35) 0%,transparent 70%);
+  top:-200px;left:50%;transform:translateX(-50%);
+  opacity:.07;
+}
+.glow-hero-2{
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(255,255,255,.2) 0%,transparent 70%);
+  top:30%;left:-100px;
+  opacity:.05;
+}
+.glow-hero-3{
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(255,255,255,.2) 0%,transparent 70%);
+  top:20%;right:-80px;
+  opacity:.05;
+}
+
+/* ── NAV ───────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;height:60px;
+  background:rgba(0,0,0,.8);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-brand{
+  display:flex;align-items:center;gap:10px;
+  font-size:1.1rem;font-weight:800;letter-spacing:-.02em;
+}
+.nav-logo{
+  width:32px;height:32px;
+  background:var(--white);
+  border-radius:8px;
+  display:grid;place-items:center;
+}
+.nav-logo svg{width:18px;height:18px}
+.nav-links{
+  display:flex;align-items:center;gap:6px;
+  list-style:none;
+}
+.nav-links a{
+  padding:6px 14px;
+  font-size:.85rem;font-weight:500;
+  color:var(--white-3);
+  border-radius:8px;
+  transition:color .2s,background .2s;
+}
+.nav-links a:hover{color:var(--white);background:var(--white-5)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.btn-nav{
+  padding:8px 18px;
+  font-size:.85rem;font-weight:600;
+  border-radius:8px;border:none;
+  transition:all .2s;
+}
+.btn-nav-ghost{
+  background:transparent;color:var(--white-3);
+  border:1px solid var(--border);
+}
+.btn-nav-ghost:hover{color:var(--white);border-color:var(--white-4)}
+.btn-nav-solid{
+  background:var(--white);color:var(--black);
+}
+.btn-nav-solid:hover{background:rgba(255,255,255,.9);transform:translateY(-1px)}
+
+/* ── HERO ──────────────────────────────────────────────────── */
+.hero{
+  position:relative;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:100px 40px 80px;
+  overflow:hidden;
+  text-align:center;
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;
+  border:1px solid var(--border-2);
+  border-radius:50px;
+  font-size:.78rem;font-weight:500;
+  color:var(--white-3);
+  margin-bottom:32px;
+  background:var(--white-6);
+  backdrop-filter:blur(10px);
+}
+.hero-eyebrow-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--white);
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{
+  font-size:clamp(3rem,8vw,6.5rem);
+  font-weight:900;
+  letter-spacing:-.04em;
+  line-height:1;
+  color:var(--white);
+  max-width:900px;
+  margin-bottom:24px;
+}
+.hero h1 .dim{color:rgba(255,255,255,.3)}
+.hero-sub{
+  font-size:clamp(.95rem,2vw,1.15rem);
+  color:var(--white-3);
+  max-width:540px;
+  line-height:1.7;
+  margin-bottom:44px;
+  font-weight:400;
+}
+.hero-actions{
+  display:flex;align-items:center;gap:14px;
+  flex-wrap:wrap;justify-content:center;
+  margin-bottom:80px;
+}
+.btn-hero-primary{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 28px;
+  background:var(--white);color:var(--black);
+  font-size:.95rem;font-weight:700;
+  border-radius:12px;border:none;
+  transition:all .25s;
+  cursor:pointer;
+}
+.btn-hero-primary:hover{background:rgba(255,255,255,.9);transform:translateY(-2px);box-shadow:0 12px 40px rgba(255,255,255,.15)}
+.btn-hero-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;
+  background:var(--white-5);color:var(--white);
+  font-size:.95rem;font-weight:600;
+  border-radius:12px;border:1px solid var(--border-2);
+  transition:all .25s;
+  cursor:pointer;
+}
+.btn-hero-secondary:hover{background:var(--white-5);border-color:var(--white-4);transform:translateY(-2px)}
+.hero-note{font-size:.78rem;color:var(--white-4);margin-top:16px}
+
+/* ── HERO LIVE CARD ────────────────────────────────────────── */
+.hero-card-wrapper{
+  width:100%;max-width:860px;
+  position:relative;
+}
+.hero-card{
+  background:var(--black-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+  box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);
+}
+.hero-card-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  background:var(--black-3);
+}
+.dot-red{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.dot-yellow{width:12px;height:12px;border-radius:50%;background:#ffbd2e}
+.dot-green{width:12px;height:12px;border-radius:50%;background:#28c840}
+.hero-card-url{
+  flex:1;
+  background:var(--black-4);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:4px 12px;
+  font-size:.78rem;
+  color:var(--white-3);
+  text-align:center;
+  margin:0 auto;
+  max-width:280px;
+}
+.hero-card-body{
+  display:grid;
+  grid-template-columns:1fr 280px;
+  min-height:380px;
+}
+.hero-card-terminal{
+  padding:20px;
+  font-family:'JetBrains Mono','Fira Code',monospace;
+  font-size:.78rem;
+  line-height:1.8;
+  border-right:1px solid var(--border);
+  overflow:hidden;
+}
+.t-line{color:var(--white-3)}
+.t-cmd{color:var(--white)}
+.t-success{color:#4ade80}
+.t-info{color:#60a5fa}
+.t-warn{color:#fbbf24}
+.t-dim{color:rgba(255,255,255,.2)}
+.t-cursor{
+  display:inline-block;width:8px;height:14px;
+  background:var(--white);vertical-align:middle;
+  animation:cursor-blink .8s step-end infinite;
+}
+@keyframes cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-card-stats{
+  padding:20px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.stat-row{
+  background:var(--black-3);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+}
+.stat-row-label{
+  font-size:.72rem;font-weight:500;
+  color:var(--white-4);
+  margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.stat-row-value{
+  font-size:1.4rem;font-weight:800;
+  color:var(--white);
+  letter-spacing:-.03em;
+}
+.stat-row-sub{font-size:.72rem;color:var(--white-4);margin-top:2px}
+.mini-bar{height:4px;background:var(--black-5);border-radius:99px;margin-top:10px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:99px;background:var(--white);transition:width 1s ease}
+.deploy-status{
+  display:flex;align-items:center;gap:8px;
+  background:var(--black-3);
+  border:1px solid rgba(74,222,128,.2);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-top:auto;
+}
+.status-dot-live{
+  width:8px;height:8px;border-radius:50%;
+  background:#4ade80;
+  box-shadow:0 0 8px #4ade80;
+  flex-shrink:0;
+  animation:glow-pulse 2s ease-in-out infinite;
+}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 4px #4ade80}50%{box-shadow:0 0 12px #4ade80}}
+.deploy-status span{font-size:.78rem;font-weight:600;color:#4ade80}
+
+/* ── SOCIAL PROOF BAR ──────────────────────────────────────── */
+.social-bar{
+  padding:28px 40px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;gap:0;
+  overflow:hidden;
+}
+.social-bar-inner{
+  display:flex;align-items:center;gap:48px;
+  animation:slide-logos 20s linear infinite;
+  white-space:nowrap;
+}
+@keyframes slide-logos{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.social-logo{
+  font-size:.85rem;font-weight:700;
+  color:rgba(255,255,255,.2);
+  letter-spacing:-.01em;
+  flex-shrink:0;
+  display:flex;align-items:center;gap:8px;
+  transition:color .3s;
+}
+.social-logo svg{width:18px;height:18px;opacity:.3}
+
+/* ── SECTION LAYOUT ────────────────────────────────────────── */
+section{position:relative}
+.section-inner{
+  max-width:1100px;
+  margin:0 auto;
+  padding:100px 40px;
+}
+.section-eyebrow{
+  font-size:.75rem;font-weight:600;
+  color:var(--white-4);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin-bottom:20px;
+}
+.section-title{
+  font-size:clamp(2rem,4vw,3.2rem);
+  font-weight:800;
+  letter-spacing:-.03em;
+  line-height:1.1;
+  color:var(--white);
+  margin-bottom:16px;
+  max-width:700px;
+}
+.section-title .dim{color:rgba(255,255,255,.25)}
+.section-sub{
+  font-size:1rem;
+  color:var(--white-3);
+  max-width:520px;
+  line-height:1.7;
+  margin-bottom:60px;
+}
+
+/* ── FEATURE BENTO ─────────────────────────────────────────── */
+.bento{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  grid-template-rows:auto;
+  gap:12px;
+}
+.bento-card{
+  background:var(--black-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+  transition:border-color .3s,transform .3s;
+  position:relative;
+}
+.bento-card:hover{border-color:var(--border-2);transform:translateY(-3px)}
+.bento-card-inner{padding:28px}
+.bento-card-icon{
+  width:40px;height:40px;
+  background:var(--white-5);
+  border:1px solid var(--border);
+  border-radius:10px;
+  display:grid;place-items:center;
+  margin-bottom:18px;
+}
+.bento-card-icon svg{width:20px;height:20px;stroke:var(--white);fill:none;stroke-width:1.5}
+.bento-card h3{
+  font-size:1rem;font-weight:700;
+  color:var(--white);margin-bottom:8px;
+  letter-spacing:-.02em;
+}
+.bento-card p{font-size:.85rem;color:var(--white-3);line-height:1.6}
+
+/* bento sizes */
+.b-1{grid-column:span 4}
+.b-2{grid-column:span 4}
+.b-3{grid-column:span 4}
+.b-4{grid-column:span 5}
+.b-5{grid-column:span 7}
+.b-6{grid-column:span 7}
+.b-7{grid-column:span 5}
+.b-8{grid-column:span 4}
+.b-9{grid-column:span 4}
+.b-10{grid-column:span 4}
+
+/* ── ANIMATED BENTO CONTENT ────────────────────────────────── */
+.animated-terminal{
+  background:var(--black);
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:20px;
+  border:1px solid var(--border);
+  font-family:'JetBrains Mono','Fira Code',monospace;
+  font-size:.72rem;
+  line-height:1.8;
+  padding:14px;
+  height:140px;
+  position:relative;
+}
+.animated-terminal::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;height:40px;
+  background:linear-gradient(transparent,var(--black));
+}
+
+.lang-pills{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;
+}
+.lang-pill{
+  padding:5px 12px;
+  border-radius:50px;
+  font-size:.75rem;font-weight:600;
+  border:1px solid var(--border);
+  color:var(--white-3);
+  background:var(--black-3);
+  display:flex;align-items:center;gap:6px;
+  transition:all .2s;
+}
+.lang-pill:hover{border-color:var(--white-4);color:var(--white);transform:translateY(-1px)}
+.lang-pill svg{width:14px;height:14px}
+
+.env-list{
+  margin-top:16px;display:flex;flex-direction:column;gap:8px;
+}
+.env-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--black);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 14px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.75rem;
+}
+.env-key{color:var(--white);font-weight:600;flex:1}
+.env-val{color:var(--white-4)}
+.env-mask{
+  padding:3px 8px;
+  background:var(--black-4);
+  border-radius:4px;
+  letter-spacing:.15em;
+  color:var(--white-4);
+}
+.env-icon{
+  width:24px;height:24px;
+  display:grid;place-items:center;
+  border-radius:5px;
+  background:var(--white-5);
+  flex-shrink:0;
+  cursor:pointer;
+}
+.env-icon svg{width:12px;height:12px;stroke:var(--white-4);stroke-width:2}
+
+.deploy-feed{
+  margin-top:16px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.deploy-item{
+  display:flex;align-items:center;gap:12px;
+  background:var(--black);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 14px;
+  font-size:.78rem;
+}
+.deploy-badge{
+  padding:3px 8px;
+  border-radius:4px;
+  font-size:.68rem;font-weight:700;
+  flex-shrink:0;
+}
+.deploy-badge.live{background:rgba(74,222,128,.12);color:#4ade80}
+.deploy-badge.build{background:rgba(96,165,250,.12);color:#60a5fa}
+.deploy-badge.queue{background:rgba(255,255,255,.06);color:var(--white-3)}
+.deploy-item-info{flex:1;min-width:0}
+.deploy-item-name{color:var(--white);font-weight:600;font-size:.78rem}
+.deploy-item-meta{color:var(--white-4);font-size:.7rem;margin-top:2px}
+.deploy-item-time{color:var(--white-4);font-size:.7rem;flex-shrink:0}
+
+.uptime-grid{
+  display:grid;grid-template-columns:repeat(35,1fr);gap:2px;margin-top:16px;
+}
+.uptime-block{
+  height:24px;border-radius:3px;
+  background:rgba(74,222,128,.2);
+}
+.uptime-block.down{background:rgba(239,68,68,.3)}
+.uptime-block.partial{background:rgba(251,191,36,.25)}
+.uptime-pct{
+  font-size:1.8rem;font-weight:800;
+  color:var(--white);letter-spacing:-.04em;
+  margin-top:14px;
+}
+.uptime-label{font-size:.75rem;color:var(--white-4)}
+
+.github-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--black);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:12px 14px;
+  margin-top:12px;
+  font-size:.8rem;
+}
+.github-row-icon{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--black-4);
+  display:grid;place-items:center;flex-shrink:0;
+}
+.github-row-icon svg{width:16px;height:16px;fill:var(--white-3)}
+.github-row-info{flex:1;min-width:0}
+.github-row-name{color:var(--white);font-weight:600;font-size:.8rem}
+.github-row-sub{color:var(--white-4);font-size:.72rem;margin-top:2px}
+.github-badge{
+  padding:4px 10px;border-radius:50px;
+  font-size:.7rem;font-weight:600;
+  background:rgba(74,222,128,.12);color:#4ade80;
+  border:1px solid rgba(74,222,128,.2);
+}
+
+/* ── RUNTIMES SECTION ──────────────────────────────────────── */
+.runtimes-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:10px;
+}
+.runtime-card{
+  background:var(--black-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:24px 16px;
+  text-align:center;
+  transition:all .25s;
+  cursor:default;
+}
+.runtime-card:hover{
+  border-color:var(--border-2);
+  background:var(--black-3);
+  transform:translateY(-3px);
+}
+.runtime-icon{font-size:1.8rem;margin-bottom:10px;display:block}
+.runtime-name{font-size:.85rem;font-weight:700;color:var(--white);margin-bottom:4px}
+.runtime-version{font-size:.72rem;color:var(--white-4)}
+
+/* ── HOW IT WORKS ──────────────────────────────────────────── */
+.steps{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+}
+.step{
+  background:var(--black-1);
+  padding:36px 28px;
+  position:relative;
+  transition:background .3s;
+}
+.step:hover{background:var(--black-2)}
+.step-num{
+  font-size:.72rem;font-weight:700;
+  color:var(--white-4);
+  letter-spacing:.1em;
+  margin-bottom:20px;
+  font-family:'JetBrains Mono',monospace;
+}
+.step-icon{
+  width:44px;height:44px;
+  background:var(--white-5);
+  border:1px solid var(--border);
+  border-radius:12px;
+  display:grid;place-items:center;
+  margin-bottom:20px;
+}
+.step-icon svg{width:22px;height:22px;stroke:var(--white);fill:none;stroke-width:1.5}
+.step h3{
+  font-size:1rem;font-weight:700;
+  color:var(--white);
+  letter-spacing:-.02em;
+  margin-bottom:10px;
+}
+.step p{font-size:.85rem;color:var(--white-3);line-height:1.6}
+
+/* ── BIG STATS ─────────────────────────────────────────────── */
+.big-stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+}
+.big-stat{
+  background:var(--black-1);
+  padding:48px 36px;
+  position:relative;
+  transition:background .3s;
+}
+.big-stat:hover{background:var(--black-2)}
+.big-stat-value{
+  font-size:clamp(2.5rem,5vw,4rem);
+  font-weight:900;
+  letter-spacing:-.04em;
+  color:var(--white);
+  line-height:1;
+  margin-bottom:8px;
+}
+.big-stat-label{
+  font-size:.88rem;
+  color:var(--white-3);
+  font-weight:500;
+}
+.big-stat-sub{
+  font-size:.75rem;
+  color:var(--white-4);
+  margin-top:6px;
+}
+
+/* ── CTA SECTION ───────────────────────────────────────────── */
+.cta-section{
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.cta-inner{
+  max-width:800px;
+  margin:0 auto;
+  padding:120px 40px;
+  text-align:center;
+}
+.cta-inner h2{
+  font-size:clamp(2.5rem,6vw,5rem);
+  font-weight:900;
+  letter-spacing:-.04em;
+  line-height:1.05;
+  color:var(--white);
+  margin-bottom:20px;
+}
+.cta-inner h2 .dim{color:rgba(255,255,255,.2)}
+.cta-inner p{
+  font-size:1rem;color:var(--white-3);
+  max-width:480px;margin:0 auto 40px;
+  line-height:1.7;
+}
+.cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.invite-note{
+  margin-top:20px;
+  font-size:.8rem;color:var(--white-4);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.invite-note-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:blink 2s ease-in-out infinite}
+
+/* ── FOOTER ────────────────────────────────────────────────── */
+footer{
+  padding:40px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:20px;
+}
+.footer-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:.95rem}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:.82rem;color:var(--white-4);transition:color .2s}
+.footer-links a:hover{color:var(--white)}
+.footer-right{font-size:.8rem;color:var(--white-4)}
+
+/* ── SCROLL REVEAL ─────────────────────────────────────────── */
+.reveal{
+  opacity:0;transform:translateY(24px);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ── ALERT BANNER ──────────────────────────────────────────── */
+#errorBanner{
+  display:none;
+  background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.25);
+  color:#f87171;
+  padding:10px 18px;
+  border-radius:8px;
+  font-size:.85rem;
+  margin-top:20px;
+  max-width:420px;
+}
+
+/* ── RESPONSIVE ────────────────────────────────────────────── */
+@media(max-width:900px){
+  nav{padding:0 20px}
+  .nav-links{display:none}
+  .bento{grid-template-columns:1fr}
+  .b-1,.b-2,.b-3,.b-4,.b-5,.b-6,.b-7,.b-8,.b-9,.b-10{grid-column:span 1}
+  .hero-card-body{grid-template-columns:1fr}
+  .hero-card-stats{display:none}
+  .section-inner{padding:70px 20px}
+  .hero{padding:80px 20px 60px}
+  footer{padding:24px 20px}
+  .social-bar{padding:20px}
+  .steps,.big-stats{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .hero h1{font-size:2.8rem}
+  .hero-actions{flex-direction:column;align-items:stretch}
+  .btn-hero-primary,.btn-hero-secondary{justify-content:center}
+  .cta-inner h2{font-size:2.5rem}
+  .runtimes-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </div>
+    Daspe
+  </div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#runtimes">Runtimes</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#stats">Platform</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="/auth/github" class="btn-nav btn-nav-ghost">Sign in</a>
+    <a href="/auth/github" class="btn-nav btn-nav-solid">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#000" style="vertical-align:middle;margin-right:4px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      Request Access
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="glow glow-hero-1"></div>
+  <div class="glow glow-hero-2"></div>
+  <div class="glow glow-hero-3"></div>
+
+  <div class="hero-eyebrow">
+    <span class="hero-eyebrow-dot"></span>
+    Private cloud hosting — invite only
+  </div>
+
+  <h1>Deploy anything.<br/><span class="dim">Own everything.</span></h1>
+  <p class="hero-sub">Daspe is a private hosting platform built for developers who need full control. Deploy websites, APIs, bots, and databases in any language — with real infrastructure, not sandboxes.</p>
+
+  <div class="hero-actions">
+    <a href="/auth/github" class="btn-hero-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#000"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      Continue with GitHub
+    </a>
+    <a href="#features" class="btn-hero-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+      See what's inside
+    </a>
+  </div>
+
+  <!-- LIVE TERMINAL CARD -->
+  <div class="hero-card-wrapper reveal">
+    <div class="hero-card">
+      <div class="hero-card-bar">
+        <span class="dot-red"></span>
+        <span class="dot-yellow"></span>
+        <span class="dot-green"></span>
+        <div class="hero-card-url">mybotproject.daspe.name.ng</div>
+      </div>
+      <div class="hero-card-body">
+        <div class="hero-card-terminal" id="heroTerminal">
+          <div class="t-line"><span class="t-dim">$</span> <span class="t-cmd" id="terminalContent"></span></div>
+        </div>
+        <div class="hero-card-stats">
+          <div class="stat-row">
+            <div class="stat-row-label">Memory Usage</div>
+            <div class="stat-row-value" id="ramVal">87 MB</div>
+            <div class="stat-row-sub">of 250 MB allocated</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="ramBar" style="width:35%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-row-label">CPU</div>
+            <div class="stat-row-value" id="cpuVal">2.4%</div>
+            <div class="stat-row-sub">0.5 vCPU limit</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="cpuBar" style="width:2.4%"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-row-label">Storage</div>
+            <div class="stat-row-value">341 MB</div>
+            <div class="stat-row-sub">of 2 GB quota</div>
+            <div class="mini-bar"><div class="mini-bar-fill" style="width:17%"></div></div>
+          </div>
+          <div class="deploy-status">
+            <div class="status-dot-live"></div>
+            <span>Live — deployed 3 minutes ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="errorBanner"></div>
+</section>
+
+<!-- SOCIAL BAR -->
+<div class="social-bar">
+  <div class="social-bar-inner" id="socialInner">
+    <!-- duplicated for infinite scroll effect -->
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <div class="section-eyebrow">Platform Features</div>
+    <h2 class="section-title">Everything you need.<br/><span class="dim">Nothing you don't.</span></h2>
+    <p class="section-sub">Daspe gives you a real server environment, not a restricted sandbox. Full Docker isolation, live metrics, encrypted secrets — production-grade from day one.</p>
+
+    <div class="bento">
+      <!-- Card 1: Deploy any language -->
+      <div class="bento-card b-1 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <h3>Any Language</h3>
+          <p>Node, Python, Go, Rust, PHP, Ruby, Java, Bun, Deno — or bring your own Dockerfile.</p>
+          <div class="lang-pills" style="margin-top:16px">
+            <span class="lang-pill">Node.js</span>
+            <span class="lang-pill">Python</span>
+            <span class="lang-pill">Go</span>
+            <span class="lang-pill">Rust</span>
+            <span class="lang-pill">PHP</span>
+            <span class="lang-pill">Bun</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Env Variables -->
+      <div class="bento-card b-2 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>Encrypted Secrets</h3>
+          <p>AES-256 encrypted env variables. Injected at runtime, never written to disk.</p>
+          <div class="env-list">
+            <div class="env-row">
+              <span class="env-key">DATABASE_URL</span>
+              <span class="env-mask">••••••••••••</span>
+              <span class="env-icon"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            </div>
+            <div class="env-row">
+              <span class="env-key">BOT_TOKEN</span>
+              <span class="env-mask">••••••••••••</span>
+              <span class="env-icon"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            </div>
+            <div class="env-row">
+              <span class="env-key">API_SECRET</span>
+              <span class="env-mask">••••••••••••</span>
+              <span class="env-icon"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: GitHub Auto Deploy -->
+      <div class="bento-card b-3 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </div>
+          <h3>Auto Deploy</h3>
+          <p>Push to GitHub, deployment rebuilds automatically via webhook. Zero manual steps.</p>
+          <div class="github-row">
+            <div class="github-row-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            </div>
+            <div class="github-row-info">
+              <div class="github-row-name">main → pushed 12s ago</div>
+              <div class="github-row-sub">Building new container...</div>
+            </div>
+            <span class="github-badge">Live</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Live Logs -->
+      <div class="bento-card b-4 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3>Real-time Logs</h3>
+          <p>Stream stdout and stderr live from any running container. Build logs included.</p>
+          <div class="animated-terminal" id="logBox"></div>
+        </div>
+      </div>
+
+      <!-- Card 5: Deployment History -->
+      <div class="bento-card b-5 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </div>
+          <h3>Deploy History & Rollback</h3>
+          <p>Every build is versioned. Roll back to any previous deployment with one click.</p>
+          <div class="deploy-feed">
+            <div class="deploy-item">
+              <span class="deploy-badge live">Live</span>
+              <div class="deploy-item-info">
+                <div class="deploy-item-name">v0.4.2 — feat: add rate limiting</div>
+                <div class="deploy-item-meta">a7c2f81 · main</div>
+              </div>
+              <span class="deploy-item-time">3m ago</span>
+            </div>
+            <div class="deploy-item">
+              <span class="deploy-badge queue">Prev</span>
+              <div class="deploy-item-info">
+                <div class="deploy-item-name">v0.4.1 — fix: db connection</div>
+                <div class="deploy-item-meta">b3e9c20 · main</div>
+              </div>
+              <span class="deploy-item-time">2h ago</span>
+            </div>
+            <div class="deploy-item">
+              <span class="deploy-badge queue">Prev</span>
+              <div class="deploy-item-info">
+                <div class="deploy-item-name">v0.4.0 — initial release</div>
+                <div class="deploy-item-meta">9f12a44 · main</div>
+              </div>
+              <span class="deploy-item-time">1d ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 6: Uptime -->
+      <div class="bento-card b-6 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3>Uptime Monitoring</h3>
+          <p>Automatic health checks, crash detection, and push alerts. Auto-restart on failure.</p>
+          <div class="uptime-grid" id="uptimeGrid"></div>
+          <div class="uptime-pct">99.97%</div>
+          <div class="uptime-label">30-day uptime across all deployments</div>
+        </div>
+      </div>
+
+      <!-- Card 7: Storage -->
+      <div class="bento-card b-7 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <h3>File Manager & Storage</h3>
+          <p>Upload files, drag-and-drop ZIPs (auto-extracted), or sync from GitHub. No hidden limits — your quota, your choice.</p>
+        </div>
+      </div>
+
+      <!-- Card 8: Push Notifications -->
+      <div class="bento-card b-8 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <h3>Push Notifications</h3>
+          <p>Get alerted when your deploy succeeds, fails, or goes down — even with the browser closed.</p>
+        </div>
+      </div>
+
+      <!-- Card 9: Isolation -->
+      <div class="bento-card b-9 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Full Container Isolation</h3>
+          <p>Every project runs in its own Docker container. No shared processes, no shared filesystem.</p>
+        </div>
+      </div>
+
+      <!-- Card 10: Admin -->
+      <div class="bento-card b-10 reveal">
+        <div class="bento-card-inner">
+          <div class="bento-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>Admin Approval Gate</h3>
+          <p>Every account manually reviewed. Resources allocated per user, adjustable anytime from the admin panel.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RUNTIMES -->
+<section id="runtimes" style="border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-eyebrow">Supported Runtimes</div>
+    <h2 class="section-title">Your code,<br/><span class="dim">your stack.</span></h2>
+    <p class="section-sub">Run anything. Daspe supports every major language and runtime. Advanced users can provide their own Dockerfile for complete control.</p>
+    <div class="runtimes-grid reveal">
+      <div class="runtime-card"><span class="runtime-icon">⬡</span><div class="runtime-name">Node.js</div><div class="runtime-version">v18 / v20 / v22</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🐍</span><div class="runtime-name">Python</div><div class="runtime-version">3.10 / 3.11 / 3.12</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🔵</span><div class="runtime-name">Go</div><div class="runtime-version">1.21 / 1.22</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🐘</span><div class="runtime-name">PHP</div><div class="runtime-version">8.1 / 8.2 / 8.3</div></div>
+      <div class="runtime-card"><span class="runtime-icon">💎</span><div class="runtime-name">Ruby</div><div class="runtime-version">3.1 / 3.2</div></div>
+      <div class="runtime-card"><span class="runtime-icon">⚡</span><div class="runtime-name">Bun</div><div class="runtime-version">Latest</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🦕</span><div class="runtime-name">Deno</div><div class="runtime-version">1.x / 2.x</div></div>
+      <div class="runtime-card"><span class="runtime-icon">☕</span><div class="runtime-name">Java</div><div class="runtime-version">JDK 17 / 21</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🦀</span><div class="runtime-name">Rust</div><div class="runtime-version">Stable / Nightly</div></div>
+      <div class="runtime-card"><span class="runtime-icon">📄</span><div class="runtime-name">Static</div><div class="runtime-version">Nginx / HTML</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🐳</span><div class="runtime-name">Custom</div><div class="runtime-version">Your Dockerfile</div></div>
+      <div class="runtime-card"><span class="runtime-icon">🛢</span><div class="runtime-name">Databases</div><div class="runtime-version">PostgreSQL / MySQL</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-eyebrow">How it works</div>
+    <h2 class="section-title">From code to live<br/><span class="dim">in under 2 minutes.</span></h2>
+    <p class="section-sub" style="margin-bottom:48px">No configuration hell. No infrastructure management. Connect GitHub or upload files, configure your runtime, and deploy.</p>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Request Access</h3>
+        <p>Sign in with GitHub. Your application is reviewed and approved by the platform admin before you can deploy anything.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>Choose Your Runtime</h3>
+        <p>Select a language runtime or write your own Dockerfile. Connect your GitHub repo or upload files directly.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Add Your Secrets</h3>
+        <p>Set encrypted environment variables for API keys, database URLs, tokens — anything sensitive. Masked in the UI, encrypted at rest.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>Deploy &amp; Monitor</h3>
+        <p>Hit deploy. Watch real-time build logs. Your project goes live on a subdomain of daspe.name.ng. Uptime monitoring starts automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="stats" style="border-top:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-eyebrow">The Platform</div>
+    <h2 class="section-title">Infrastructure that<br/><span class="dim">doesn't flinch.</span></h2>
+    <p class="section-sub" style="margin-bottom:48px">Built on bare metal. No shared CPU throttling, no artificial limits beyond your quota. What you're allocated is what you get.</p>
+    <div class="big-stats reveal">
+      <div class="big-stat">
+        <div class="big-stat-value" id="stat1">250</div>
+        <div class="big-stat-label">MB RAM default</div>
+        <div class="big-stat-sub">Per user — adjustable by admin</div>
+      </div>
+      <div class="big-stat">
+        <div class="big-stat-value">99.97<span style="font-size:2rem">%</span></div>
+        <div class="big-stat-label">Uptime guaranteed</div>
+        <div class="big-stat-sub">Monitored every 60 seconds</div>
+      </div>
+      <div class="big-stat">
+        <div class="big-stat-value">&lt;2s</div>
+        <div class="big-stat-label">Container start time</div>
+        <div class="big-stat-sub">Docker on AMD EPYC</div>
+      </div>
+      <div class="big-stat">
+        <div class="big-stat-value">∞</div>
+        <div class="big-stat-label">Deployments per user</div>
+        <div class="big-stat-sub">Limited only by your quota</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <h2>Your next project<br/><span class="dim">lives here.</span></h2>
+    <p>Daspe is invite-only. Request access with your GitHub account and deploy in any language, any framework, any stack.</p>
+    <div class="cta-actions">
+      <a href="/auth/github" class="btn-hero-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#000"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        Request Access
+      </a>
+    </div>
+    <div class="invite-note">
+      <span class="invite-note-dot"></span>
+      Invite-only — access reviewed manually
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </div>
+    Daspe
+  </div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#runtimes">Runtimes</a>
+    <a href="#how">Docs</a>
+    <a href="/auth/github">Sign In</a>
+  </div>
+  <div class="footer-right">© 2024 Daspe. Private platform.</div>
+</footer>
+
+<script>
+// ── TERMINAL ANIMATION ──────────────────────────────────────
+const termLines = [
+  {text:'git push origin main', class:'t-cmd', delay:0},
+  {text:'Enumerating objects: 5, done.', class:'t-line', delay:800},
+  {text:'Compressing objects: 100% (3/3)', class:'t-line', delay:1200},
+  {text:'', class:'', delay:1600},
+  {text:'[daspe] Webhook received — building...', class:'t-info', delay:2000},
+  {text:'[daspe] Pulling image python:3.12-alpine', class:'t-info', delay:2800},
+  {text:'[daspe] Installing dependencies...', class:'t-info', delay:3600},
+  {text:'Step 1/4: pip install -r requirements.txt', class:'t-line', delay:4000},
+  {text:'Successfully installed requests-2.31.0', class:'t-line', delay:4600},
+  {text:'[daspe] Starting container...', class:'t-info', delay:5200},
+  {text:'✓ Bot connected to Telegram API', class:'t-success', delay:6000},
+  {text:'✓ Listening for commands...', class:'t-success', delay:6400},
+  {text:'✓ Deployed → mybot.daspe.name.ng', class:'t-success', delay:6800},
+  {text:'', class:'', delay:7200},
+  {text:'$', class:'t-dim', delay:7600},
+];
+
+const termEl = document.getElementById('heroTerminal');
+let lineIndex = 0;
+
+function addTermLine(text, cls) {
+  const line = document.createElement('div');
+  line.className = cls || 't-line';
+  line.textContent = text;
+  termEl.appendChild(line);
+  termEl.scrollTop = termEl.scrollHeight;
+}
+
+function runTerminal() {
+  termEl.innerHTML = '';
+  lineIndex = 0;
+  function next() {
+    if (lineIndex >= termLines.length) {
+      setTimeout(runTerminal, 4000);
+      return;
+    }
+    const l = termLines[lineIndex++];
+    if (l.text !== '' || l.class !== '') addTermLine(l.text, l.class);
+    setTimeout(next, termLines[lineIndex - 1]?.delay || 400);
+  }
+  setTimeout(next, 500);
+}
+runTerminal();
+
+// ── LOG BOX ANIMATION ───────────────────────────────────────
+const logLines = [
+  {t:'[12:34:01]', msg:'Server started on port 8080', c:'#4ade80'},
+  {t:'[12:34:02]', msg:'Connected to PostgreSQL', c:'#4ade80'},
+  {t:'[12:34:05]', msg:'GET /health 200 (2ms)', c:'rgba(255,255,255,.5)'},
+  {t:'[12:34:11]', msg:'POST /api/data 200 (18ms)', c:'rgba(255,255,255,.5)'},
+  {t:'[12:34:19]', msg:'WebSocket client connected', c:'#60a5fa'},
+  {t:'[12:34:33]', msg:'GET /api/users 200 (7ms)', c:'rgba(255,255,255,.5)'},
+  {t:'[12:34:41]', msg:'Event dispatched: user.action', c:'#60a5fa'},
+  {t:'[12:34:55]', msg:'Scheduled task ran: cleanup', c:'rgba(255,255,255,.35)'},
+];
+const logBox = document.getElementById('logBox');
+let logI = 0;
+function addLog() {
+  const l = logLines[logI % logLines.length];
+  const div = document.createElement('div');
+  div.style.color = 'rgba(255,255,255,.3)';
+  div.innerHTML = `<span style="color:rgba(255,255,255,.2)">${l.t}</span> <span style="color:${l.c}">${l.msg}</span>`;
+  logBox.appendChild(div);
+  if (logBox.children.length > 6) logBox.removeChild(logBox.children[0]);
+  logI++;
+}
+setInterval(addLog, 1200);
+addLog(); addLog(); addLog();
+
+// ── UPTIME GRID ─────────────────────────────────────────────
+const uptimeGrid = document.getElementById('uptimeGrid');
+for (let i = 0; i < 35; i++) {
+  const b = document.createElement('div');
+  b.className = 'uptime-block' + (i === 7 || i === 22 ? ' partial' : '');
+  uptimeGrid.appendChild(b);
+}
+
+// ── SOCIAL BAR ──────────────────────────────────────────────
+const logos = ['Telegram Bots','Discord Bots','REST APIs','Web Apps','Scrapers','Cron Jobs','Databases','Webhooks','Static Sites','CLI Tools','ML Models','Microservices'];
+const inner = document.getElementById('socialInner');
+const allLogos = [...logos, ...logos];
+inner.innerHTML = allLogos.map(l => `<span class="social-logo">${l}</span>`).join('');
+
+// ── RAM/CPU LIVE ANIMATION ──────────────────────────────────
+function randomBetween(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+setInterval(() => {
+  const ram = randomBetween(75, 130);
+  const cpu = (Math.random() * 5 + 1).toFixed(1);
+  const ramEl = document.getElementById('ramVal');
+  const cpuEl = document.getElementById('cpuVal');
+  const ramBar = document.getElementById('ramBar');
+  const cpuBar = document.getElementById('cpuBar');
+  if (ramEl) ramEl.textContent = ram + ' MB';
+  if (cpuEl) cpuEl.textContent = cpu + '%';
+  if (ramBar) ramBar.style.width = (ram / 250 * 100) + '%';
+  if (cpuBar) cpuBar.style.width = cpu + '%';
+}, 2800);
+
+// ── SCROLL REVEAL ───────────────────────────────────────────
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── ERROR BANNER ────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const errMap = {
+  auth_failed:'Authentication failed. Please try again.',
+  duplicate_email:'An account with this GitHub email already exists.',
+  account_rejected:'Your account application was not approved.',
+  account_suspended:'Your account has been suspended. Contact support.',
+};
+const err = params.get('error');
+if (err && errMap[err]) {
+  const b = document.getElementById('errorBanner');
+  b.textContent = errMap[err];
+  b.style.display = 'block';
+}
+
+// ── SERVICE WORKER ──────────────────────────────────────────
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Broadcast — Daspe Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe Admin</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Admin</div>
+    <a href="/admin/" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</a>
+    <a href="/admin/users.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users<span class="nav-badge" id="pendingBadge" style="display:none">0</span></a>
+    <a href="/admin/deployments.html" class="nav-item"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>Deployments</a>
+    <a href="/admin/broadcast.html" class="nav-item active"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2"/></svg>Broadcast</a>
+    <a href="/admin/audit.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Audit Log</a>
+    <hr style="margin:8px;border-color:var(--border)"/>
+    <a href="/dashboard/" class="nav-item"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>User View</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer"><div class="user-chip"><img class="avatar" id="sidebarAvatar" src="" alt=""/><div class="user-chip-info"><div class="user-chip-name" id="sidebarName">Admin</div><div class="user-chip-sub">Administrator</div></div></div></div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title">Broadcast Notification</span>
+  </div>
+  <div class="content">
+    <div class="page-header"><h1 class="page-title">Send Notification</h1><p class="page-sub">Push a message to all or selected users, delivered via push notification and stored in their notification center</p></div>
+    <div style="max-width:580px">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-hd"><h3>Compose Message</h3></div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-group"><label class="form-label">Title</label><input type="text" id="bcTitle" placeholder="Platform update" maxlength="100"/></div>
+          <div class="form-group"><label class="form-label">Message</label><textarea id="bcBody" placeholder="Enter your message to users..." style="height:100px" maxlength="500"></textarea></div>
+          <div class="form-group"><label class="form-label">Recipients</label>
+            <select id="bcTarget" onchange="toggleSelected()">
+              <option value="all">All Users</option>
+              <option value="active">Active Users Only</option>
+              <option value="selected">Selected Users</option>
+            </select>
+          </div>
+          <div id="selectedUsersWrap" style="display:none">
+            <div class="form-group"><label class="form-label">Select Users</label><div id="userCheckList" style="max-height:200px;overflow-y:auto;background:var(--black-3);border:1px solid var(--border);border-radius:var(--radius);padding:8px"><div class="loading"><div class="spin"></div>Loading users</div></div></div>
+          </div>
+          <button class="btn btn-primary" id="sendBtn" onclick="send()">Send Notification</button>
+        </div>
+      </div>
+      <div id="sendResult" style="display:none" class="card">
+        <div class="section-hd"><h3>Sent</h3></div>
+        <p class="text-sm text-muted" id="sendResultText"></p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script src="/assets/js/app.js"></script>
+<script>
+let users = [];
+async function init() {
+  const user = await checkAuth('/');
+  if (!user || user.role !== 'admin') return window.location.href = '/dashboard/';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  initSidebar();
+  loadPending();
+  loadUsers();
+}
+async function loadPending() {
+  try { const d = await api.get('/api/admin/pending-count'); const pb = document.getElementById('pendingBadge'); if(pb){pb.textContent=d.count;pb.style.display=d.count>0?'block':'none';} } catch{}
+}
+async function loadUsers() {
+  try {
+    const d = await api.get('/api/admin/users?status=active&limit=100');
+    users = d.users;
+    document.getElementById('userCheckList').innerHTML = users.map(u => `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;border-radius:6px;font-size:.83rem;" onmouseover="this.style.background='var(--black-4)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${u.id}" style="width:auto"/>
+        <img class="avatar" src="${u.github_avatar||''}" alt=""/>
+        <span>${u.github_username}</span>
+      </label>`).join('') || '<div class="text-xs text-muted" style="padding:8px">No active users</div>';
+  } catch {}
+}
+function toggleSelected() {
+  document.getElementById('selectedUsersWrap').style.display = document.getElementById('bcTarget').value === 'selected' ? 'block' : 'none';
+}
+async function send() {
+  const title = document.getElementById('bcTitle').value.trim();
+  const body = document.getElementById('bcBody').value.trim();
+  const target = document.getElementById('bcTarget').value;
+  if (!title || !body) { toast.error('Title and message are required'); return; }
+  let target_user_ids = null;
+  if (target === 'selected') {
+    target_user_ids = Array.from(document.querySelectorAll('#userCheckList input:checked')).map(i => i.value);
+    if (!target_user_ids.length) { toast.error('Select at least one user'); return; }
+  }
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    const res = await api.post('/api/admin/broadcast', { title, body, target, target_user_ids });
+    toast.success(`Sent to ${res.sent_count} subscriber(s)`);
+    document.getElementById('sendResult').style.display = 'block';
+    document.getElementById('sendResultText').textContent = `Message delivered to ${res.sent_count} push subscriber(s) and saved to all targeted users notification center.`;
+    document.getElementById('bcTitle').value = '';
+    document.getElementById('bcBody').value = '';
+  } catch(e) { toast.error(e.message); }
+  btn.disabled = false; btn.textContent = 'Send Notification';
+}
+init();
+</script>
+</body>
+</html>

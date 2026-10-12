@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Deployment — Daspe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+<style>
+.dep-hero{background:var(--black-2);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;margin-bottom:20px}
+.dep-hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.dep-hero-name{font-size:1.4rem;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+.dep-hero-url{font-size:.85rem;color:var(--white-3)}
+.dep-hero-url a{color:var(--white-3);transition:color .2s}.dep-hero-url a:hover{color:var(--white)}
+.dep-actions{display:flex;gap:6px;flex-wrap:wrap}
+.dep-meta-row{display:flex;gap:8px;flex-wrap:wrap}
+.dep-live-card{background:var(--black-3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+.dep-live-stat .lbl{font-size:.7rem;font-weight:600;color:var(--white-4);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.dep-live-stat .val{font-size:1.2rem;font-weight:800;letter-spacing:-.03em}
+.webhook-box{background:var(--black);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-family:var(--mono);font-size:.75rem;color:var(--white-3);word-break:break-all;display:flex;align-items:center;gap:10px}
+.webhook-box span{flex:1}
+.copy-btn{flex-shrink:0;padding:4px 8px;border-radius:5px;background:var(--white-5);border:none;cursor:pointer;color:var(--white-3);font-size:.72rem;transition:all .2s}
+.copy-btn:hover{background:var(--border-2);color:var(--white)}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a href="/dashboard/" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="/dashboard/deployments.html" class="nav-item active"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Deployments</a>
+    <div class="nav-section">Tools</div>
+    <a href="/dashboard/files.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+    <a href="/dashboard/repos.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87"/></svg>GitHub Repos</a>
+    <div class="nav-section">Account</div>
+    <a href="/dashboard/notifications.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span class="nav-badge" id="sideNotifBadge" style="display:none">0</span></a>
+    <a href="/dashboard/settings.html" class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Settings</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer"><div class="user-chip"><img class="avatar" id="sidebarAvatar" src="" alt=""/><div class="user-chip-info"><div class="user-chip-name" id="sidebarName">...</div><div class="user-chip-sub">Member</div></div></div></div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title" id="topbarTitle">Deployment</span>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="window.location='/dashboard/deployments.html'">Back</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="crumb"><a href="/dashboard/">Dashboard</a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><a href="/dashboard/deployments.html">Deployments</a><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span id="breadcrumbName">Loading</span></div>
+    <div id="depHero"><div class="loading"><div class="spin"></div>Loading deployment</div></div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview')">Overview</button>
+      <button class="tab" onclick="switchTab('logs')">Logs</button>
+      <button class="tab" onclick="switchTab('env')">Environment</button>
+      <button class="tab" onclick="switchTab('files')">Files</button>
+      <button class="tab" onclick="switchTab('builds')">Build History</button>
+      <button class="tab" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <div id="tab-overview">
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card"><div class="section-hd" style="margin-bottom:14px"><h3>Resource Usage</h3></div><div id="liveRes"><div class="loading"><div class="spin"></div></div></div></div>
+        <div class="card"><div class="section-hd" style="margin-bottom:14px"><h3>Uptime</h3></div><div id="uptimeView"><div class="loading"><div class="spin"></div></div></div></div>
+      </div>
+      <div class="card"><div class="section-hd"><h3>Webhook URL</h3><button class="btn btn-ghost btn-sm" onclick="copyWebhook()">Copy</button></div><p class="text-xs text-muted" style="margin-bottom:10px">Add this URL to your GitHub repository webhook settings to enable auto deploy</p><div class="webhook-box"><span id="webhookUrl">Loading...</span><button class="copy-btn" onclick="copyWebhook()">Copy</button></div></div>
+    </div>
+
+    <div id="tab-logs" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-hd"><h3>Live Container Logs</h3><button class="btn btn-ghost btn-sm" onclick="startLogs()">Reconnect</button></div>
+        <div class="log-viewer" id="liveLogBox">Connecting to container logs...</div>
+      </div>
+    </div>
+
+    <div id="tab-env" style="display:none">
+      <div class="card">
+        <div class="section-hd"><h3>Environment Variables</h3><button class="btn btn-primary btn-sm" onclick="modal.open('addEnvModal')">Add Variable</button></div>
+        <p class="text-xs text-muted" style="margin-bottom:14px">Stored encrypted with AES-256. Injected into the container at runtime. Redeploy after changes.</p>
+        <div class="env-tbl" id="envList"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+    </div>
+
+    <div id="tab-files" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-hd"><h3>Upload Files</h3></div>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            <h4>Drop files or click to upload</h4>
+            <p>Any file type. ZIP files are auto-extracted. Limited only by your storage quota.</p>
+          </div>
+          <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()"/>
+        </div>
+        <div class="card">
+          <div class="section-hd"><h3>Files</h3><span class="text-xs text-muted" id="storageUsed"></span></div>
+          <div class="file-tree" id="fileTree"><div class="loading"><div class="spin"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-builds" style="display:none">
+      <div class="card">
+        <div class="section-hd"><h3>Build History</h3></div>
+        <div class="tbl-wrap" id="buildsTable"><div class="loading"><div class="spin"></div></div></div>
+      </div>
+    </div>
+
+    <div id="tab-settings" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-hd"><h3>General Settings</h3></div>
+        <div style="display:flex;flex-direction:column;gap:14px" id="settingsForm">
+          <div class="form-group"><label class="form-label">Project Name</label><input type="text" id="setName"/></div>
+          <div class="grid-2">
+            <div class="form-group"><label class="form-label">Build Command</label><input type="text" id="setBuild"/></div>
+            <div class="form-group"><label class="form-label">Start Command</label><input type="text" id="setStart"/></div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group"><label class="form-label">GitHub Branch</label><input type="text" id="setBranch"/></div>
+            <div class="form-group"><label class="form-label">Port</label><input type="number" id="setPort"/></div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group"><label class="form-label">Health Check URL</label><input type="text" id="setHealth" placeholder="https://myapp.daspe.name.ng/health"/></div>
+            <div class="form-group"><label class="form-label">Sleep After (minutes, 0 = never)</label><input type="number" id="setSleep" value="0"/></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--white-3)"><input type="checkbox" id="setAutoDeploy" style="width:auto"/>Auto Deploy on GitHub Push</label>
+          <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,.15)">
+        <div class="section-hd"><h3 class="text-danger">Danger Zone</h3></div>
+        <p class="text-xs text-muted" style="margin-bottom:14px">These actions are permanent and cannot be undone.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="deleteDeployment()">Delete Deployment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ADD ENV MODAL -->
+<div class="overlay" id="addEnvModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hd"><span class="modal-title">Add Environment Variable</span><button class="modal-close" onclick="modal.close('addEnvModal')">&#x2715;</button></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-group"><label class="form-label">Key</label><input type="text" id="envKey" placeholder="MY_API_KEY" style="font-family:var(--mono)"/></div>
+      <div class="form-group"><label class="form-label">Value</label><textarea id="envVal" placeholder="Paste your secret value here" style="height:80px"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="modal.close('addEnvModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addEnv()">Save Variable</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/app.js"></script>
+<script>
+let dep = null, depId = null, logStream = null;
+
+async function init() {
+  const user = await checkAuth('/');
+  if (!user || user.status !== 'active') return window.location.href = '/';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  initSidebar();
+  depId = new URLSearchParams(location.search).get('id');
+  if (!depId) return window.location.href = '/dashboard/deployments.html';
+  await loadDep();
+  updateNotifBadge();
+  loadLiveRes();
+  setInterval(loadLiveRes, 5000);
+}
+
+async function loadDep() {
+  try {
+    dep = await api.get(`/api/deployments/${depId}`);
+    document.getElementById('topbarTitle').textContent = dep.name;
+    document.getElementById('breadcrumbName').textContent = dep.name;
+    const BASE = location.hostname.replace(/^[^.]+\./,'');
+    const domain = `${dep.subdomain}.${BASE}`;
+    document.getElementById('webhookUrl').textContent = `https://${BASE}/api/deployments/${depId}/webhook`;
+    document.getElementById('depHero').innerHTML = `
+      <div class="dep-hero">
+        <div class="dep-hero-top">
+          <div><div class="dep-hero-name">${dep.name}</div><div class="dep-hero-url"><a href="https://${domain}" target="_blank">${domain}</a></div></div>
+          <div style="display:flex;align-items:center;gap:8px">${fmt.badge(dep.status)}<div class="dep-actions">
+            ${dep.status === 'running' ? `<button class="btn btn-ghost btn-sm" onclick="action('restart')">Restart</button><button class="btn btn-ghost btn-sm" onclick="action('stop')">Stop</button>` : ''}
+            ${dep.status === 'stopped' || dep.status === 'sleeping' ? `<button class="btn btn-success btn-sm" onclick="action('start')">Start</button>` : ''}
+            <button class="btn btn-primary btn-sm" onclick="action('deploy')">Deploy</button>
+          </div></div>
+        </div>
+        <div class="dep-meta-row">
+          <span class="tag">${fmt.runtime(dep.runtime)}</span>
+          <span class="tag">${dep.type}</span>
+          ${dep.github_repo ? `<span class="tag">${dep.github_repo}</span>` : ''}
+          <span class="tag">${dep.ram_limit_mb} MB RAM</span>
+          ${dep.auto_deploy ? '<span class="tag">Auto Deploy</span>' : ''}
+        </div>
+        <div class="dep-live-card">
+          <div class="dep-live-stat"><div class="lbl">RAM Used</div><div class="val" id="liveRam">...</div></div>
+          <div class="dep-live-stat"><div class="lbl">CPU</div><div class="val" id="liveCpu">...</div></div>
+          <div class="dep-live-stat"><div class="lbl">Last Deploy</div><div class="val" style="font-size:.9rem">${dep.deployed_at ? fmt.ago(dep.deployed_at) : 'Never'}</div></div>
+        </div>
+      </div>`;
+    // Prefill settings
+    document.getElementById('setName').value = dep.name;
+    document.getElementById('setBuild').value = dep.build_command || '';
+    document.getElementById('setStart').value = dep.start_command || '';
+    document.getElementById('setBranch').value = dep.github_branch || 'main';
+    document.getElementById('setPort').value = dep.port || 3000;
+    document.getElementById('setHealth').value = dep.health_check_url || '';
+    document.getElementById('setSleep').value = dep.sleep_after_minutes || 0;
+    document.getElementById('setAutoDeploy').checked = dep.auto_deploy;
+  } catch(e) { toast.error(e.message); }
+}
+
+async function loadLiveRes() {
+  try {
+    const s = await api.get(`/api/deployments/${depId}/stats`);
+    const ramEl = document.getElementById('liveRam');
+    const cpuEl = document.getElementById('liveCpu');
+    if (ramEl) ramEl.textContent = s.current.ram_used_mb.toFixed(0) + ' MB';
+    if (cpuEl) cpuEl.textContent = s.current.cpu_percent.toFixed(1) + '%';
+    document.getElementById('liveRes').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${resBar(s.current.ram_used_mb, dep?.ram_limit_mb || 128, 'RAM')}
+        <div class="res-bar-wrap"><div class="res-bar-label"><span>CPU</span><span>${s.current.cpu_percent.toFixed(1)}%</span></div><div class="res-bar"><div class="res-bar-fill res-fill-ok" style="width:${Math.min(100,s.current.cpu_percent)}%"></div></div></div>
+      </div>`;
+  } catch {}
+}
+
+async function loadUptime() {
+  try {
+    const u = await api.get(`/api/deployments/${depId}/uptime`);
+    const blocks = u.checks.slice(0,30).reverse().map(c => `<div style="flex:1;height:20px;border-radius:2px;background:${c.status==='up'?'rgba(74,222,128,.25)':'rgba(248,113,113,.3)'}" title="${c.status}"></div>`).join('');
+    document.getElementById('uptimeView').innerHTML = `<div style="font-size:1.6rem;font-weight:800;margin-bottom:6px">${u.uptime_percent}%</div><div style="font-size:.75rem;color:var(--white-4);margin-bottom:10px">30-day uptime</div><div style="display:flex;gap:2px">${blocks || '<span class="text-muted text-xs">No checks yet</span>'}</div>`;
+  } catch { document.getElementById('uptimeView').innerHTML = '<span class="text-muted text-xs">No data yet</span>'; }
+}
+
+async function loadEnv() {
+  try {
+    const vars = await api.get(`/api/deployments/${depId}/env`);
+    if (!vars.length) { document.getElementById('envList').innerHTML = '<div class="empty"><p>No environment variables set</p></div>'; return; }
+    document.getElementById('envList').innerHTML = vars.map(v => `
+      <div class="env-row">
+        <span class="env-key">${v.key}</span>
+        <span class="env-masked">&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;</span>
+        <div class="env-actions">
+          <button class="env-btn" onclick="deleteEnv('${v.key}')" title="Delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+      </div>`).join('');
+  } catch(e) { toast.error(e.message); }
+}
+
+async function addEnv() {
+  const key = document.getElementById('envKey').value.trim();
+  const value = document.getElementById('envVal').value;
+  if (!key) { toast.error('Key is required'); return; }
+  try {
+    await api.put(`/api/deployments/${depId}/env`, { key, value });
+    toast.success('Variable saved');
+    modal.close('addEnvModal');
+    document.getElementById('envKey').value = '';
+    document.getElementById('envVal').value = '';
+    loadEnv();
+  } catch(e) { toast.error(e.message); }
+}
+
+async function deleteEnv(key) {
+  if (!await confirm('Delete Variable', `Remove "${key}" from this deployment?`, 'Delete')) return;
+  try { await api.del(`/api/deployments/${depId}/env/${key}`); toast.success('Variable removed'); loadEnv(); } catch(e) { toast.error(e.message); }
+}
+
+async function loadFiles() {
+  try {
+    const d = await api.get(`/api/deployments/${depId}/files`);
+    document.getElementById('storageUsed').textContent = `${d.storage_used_mb} MB used`;
+    if (!d.files.length) { document.getElementById('fileTree').innerHTML = '<div class="empty"><p>No files uploaded yet</p></div>'; return; }
+    document.getElementById('fileTree').innerHTML = d.files.slice(0,40).map(f => `
+      <div class="file-item">
+        <svg viewBox="0 0 24 24">${f.type==='directory' ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'}
+        </svg>
+        <span class="file-name">${f.path}</span>
+        ${f.size ? `<span class="file-size">${(f.size/1024).toFixed(0)} KB</span>` : ''}
+        ${f.type === 'file' ? `<button class="env-btn" onclick="deleteFile('${f.path}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
+      </div>`).join('');
+  } catch(e) { toast.error(e.message); }
+}
+
+async function uploadFiles() {
+  const files = document.getElementById('fileInput').files;
+  if (!files.length) return;
+  const fd = new FormData();
+  for (const f of files) fd.append('files', f);
+  try {
+    await api.req('POST', `/api/deployments/${depId}/files`, fd);
+    toast.success(`Uploaded ${files.length} file(s)`);
+    loadFiles();
+  } catch(e) { toast.error(e.message); }
+}
+
+async function deleteFile(path) {
+  if (!await confirm('Delete File', `Delete "${path}"?`, 'Delete')) return;
+  try { await api.del(`/api/deployments/${depId}/files/${path}`); toast.success('File deleted'); loadFiles(); } catch(e) { toast.error(e.message); }
+}
+
+async function loadBuilds() {
+  try {
+    const builds = await api.get(`/api/deployments/${depId}/builds`);
+    if (!builds.length) { document.getElementById('buildsTable').innerHTML = '<div class="empty"><p>No builds yet</p></div>'; return; }
+    document.getElementById('buildsTable').innerHTML = `<table><thead><tr><th>Status</th><th>Trigger</th><th>Commit</th><th>Started</th><th>Duration</th><th>Action</th></tr></thead><tbody>${builds.map(b => {
+      const dur = b.finished_at ? Math.round((new Date(b.finished_at)-new Date(b.started_at))/1000) : null;
+      return `<tr><td>${fmt.badge(b.status)}</td><td><span class="tag">${b.trigger}</span></td><td><span class="mono text-xs">${b.commit_sha ? b.commit_sha.slice(0,7) : 'Manual'}</span>${b.commit_message ? `<div class="text-xs text-muted">${b.commit_message.slice(0,40)}</div>` : ''}</td><td>${fmt.ago(b.started_at)}</td><td>${dur ? dur+'s' : 'In progress'}</td><td><button class="btn btn-ghost btn-sm" onclick="viewBuildLog('${b.id}')">Logs</button>${b.status==='success' ? `<button class="btn btn-ghost btn-sm" onclick="rollback('${b.id}')">Rollback</button>` : ''}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  } catch(e) { toast.error(e.message); }
+}
+
+async function viewBuildLog(buildId) {
+  try {
+    const d = await api.get(`/api/deployments/${depId}/builds/${buildId}/logs`);
+    const el = document.createElement('div');
+    el.className = 'overlay open';
+    el.innerHTML = `<div class="modal" style="max-width:700px"><div class="modal-hd"><span class="modal-title">Build Logs</span><button class="modal-close" onclick="this.closest('.overlay').remove()">&#x2715;</button></div><div class="log-viewer" style="max-height:60vh">${(d.logs||'No logs yet').replace(/\n/g,'<br>')}</div></div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  } catch(e) { toast.error(e.message); }
+}
+
+async function rollback(buildId) {
+  if (!await confirm('Rollback', 'Rollback to this build version?', 'Rollback')) return;
+  try { await api.post(`/api/deployments/${depId}/rollback/${buildId}`); toast.success('Rollback started'); loadDep(); } catch(e) { toast.error(e.message); }
+}
+
+async function action(act) {
+  try {
+    await api.post(`/api/deployments/${depId}/${act}`);
+    toast.success(act.charAt(0).toUpperCase() + act.slice(1) + ' triggered');
+    setTimeout(loadDep, 1500);
+  } catch(e) { toast.error(e.message); }
+}
+
+async function saveSettings() {
+  try {
+    await api.patch(`/api/deployments/${depId}`, {
+      name: document.getElementById('setName').value,
+      build_command: document.getElementById('setBuild').value || null,
+      start_command: document.getElementById('setStart').value || null,
+      github_branch: document.getElementById('setBranch').value,
+      port: parseInt(document.getElementById('setPort').value),
+      health_check_url: document.getElementById('setHealth').value || null,
+      sleep_after_minutes: parseInt(document.getElementById('setSleep').value) || 0,
+      auto_deploy: document.getElementById('setAutoDeploy').checked,
+    });
+    toast.success('Settings saved');
+    loadDep();
+  } catch(e) { toast.error(e.message); }
+}
+
+async function deleteDeployment() {
+  if (!await confirm('Delete Deployment', 'This will permanently delete the deployment, container, and all files. This cannot be undone.', 'Delete Permanently')) return;
+  try { await api.del(`/api/deployments/${depId}`); toast.success('Deployment deleted'); setTimeout(() => window.location.href = '/dashboard/deployments.html', 1000); } catch(e) { toast.error(e.message); }
+}
+
+function startLogs() {
+  const box = document.getElementById('liveLogBox');
+  if (!box) return;
+  if (logStream) logStream.close();
+  box.textContent = 'Connecting...';
+  logStream = new EventSource(`/api/deployments/${depId}/logs`);
+  logStream.onmessage = e => {
+    const d = JSON.parse(e.data);
+    box.textContent += d.log;
+    box.scrollTop = box.scrollHeight;
+  };
+  logStream.onerror = () => { box.textContent += '\n[Connection lost — click Reconnect]'; };
+}
+
+function copyWebhook() {
+  const t = document.getElementById('webhookUrl').textContent;
+  navigator.clipboard.writeText(t).then(() => toast.success('Copied to clipboard'));
+}
+
+function switchTab(t) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+t).style.display = 'block';
+  event.target.classList.add('active');
+  if (t === 'logs') startLogs();
+  if (t === 'env') loadEnv();
+  if (t === 'files') loadFiles();
+  if (t === 'builds') loadBuilds();
+  if (t === 'overview') { loadUptime(); loadLiveRes(); }
+}
+
+const dz = document.getElementById('uploadZone');
+if (dz) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); const inp = document.getElementById('fileInput'); const dt = new DataTransfer(); for (const f of e.dataTransfer.files) dt.items.add(f); inp.files = dt.files; uploadFiles(); });
+}
+init();
+</script>
+</body>
+</html>

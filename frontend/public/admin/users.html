@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Users — Daspe Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe Admin</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Admin</div>
+    <a href="/admin/" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</a>
+    <a href="/admin/users.html" class="nav-item active"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users<span class="nav-badge" id="pendingBadge" style="display:none">0</span></a>
+    <a href="/admin/deployments.html" class="nav-item"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>Deployments</a>
+    <a href="/admin/broadcast.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2"/></svg>Broadcast</a>
+    <a href="/admin/audit.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Audit Log</a>
+    <hr style="margin:8px;border-color:var(--border)"/>
+    <a href="/dashboard/" class="nav-item"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>User View</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer"><div class="user-chip"><img class="avatar" id="sidebarAvatar" src="" alt=""/><div class="user-chip-info"><div class="user-chip-name" id="sidebarName">Admin</div><div class="user-chip-sub">Administrator</div></div></div></div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title">Users</span>
+    <div class="topbar-actions">
+      <select id="statusFilter" style="width:auto" onchange="load()"><option value="">All Users</option><option value="pending">Pending</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="rejected">Rejected</option></select>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header"><h1 class="page-title">User Management</h1><p class="page-sub" id="userCount">Loading</p></div>
+    <div class="tbl-wrap"><table><thead><tr><th>User</th><th>Status</th><th>GitHub</th><th>Deployments</th><th>RAM Limit</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="usersTbody"><tr><td colspan="7"><div class="loading"><div class="spin"></div>Loading</div></td></tr></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- EDIT RESOURCES MODAL -->
+<div class="overlay" id="resModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hd"><span class="modal-title">Edit Resource Limits</span><button class="modal-close" onclick="modal.close('resModal')">&#x2715;</button></div>
+    <input type="hidden" id="resUserId"/>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-group"><label class="form-label">RAM Limit (MB)</label><input type="number" id="resRam" min="64" max="4096"/></div>
+      <div class="form-group"><label class="form-label">Storage Limit (MB)</label><input type="number" id="resStorage" min="512" max="20480"/></div>
+      <div class="form-group"><label class="form-label">CPU Limit (vCPU shares)</label><input type="number" id="resCpu" step="0.1" min="0.1" max="2"/></div>
+    </div>
+    <div class="modal-ft"><button class="btn btn-ghost" onclick="modal.close('resModal')">Cancel</button><button class="btn btn-primary" onclick="saveRes()">Save Limits</button></div>
+  </div>
+</div>
+
+<script src="/assets/js/app.js"></script>
+<script>
+async function init() {
+  const user = await checkAuth('/');
+  if (!user || user.role !== 'admin') return window.location.href = '/dashboard/';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  initSidebar();
+  const p = new URLSearchParams(location.search).get('status');
+  if (p) document.getElementById('statusFilter').value = p;
+  load();
+}
+async function load() {
+  const status = document.getElementById('statusFilter').value;
+  try {
+    const d = await api.get(`/api/admin/users?${status?'status='+status:''}&limit=50`);
+    document.getElementById('userCount').textContent = `${d.total} user${d.total !== 1 ? 's' : ''}`;
+    const pb = document.getElementById('pendingBadge');
+    document.getElementById('usersTbody').innerHTML = d.users.map(u => `
+      <tr>
+        <td><div class="user-row"><img class="avatar" src="${u.github_avatar||''}" alt=""/><div class="user-row-info"><div class="user-row-name">${u.github_name||u.github_username}</div><div class="user-row-sub">@${u.github_username}</div></div></div></td>
+        <td>${fmt.badge(u.status)}</td>
+        <td><div class="text-xs mono" style="color:var(--white-4)">${u.github_email||'N/A'}</div><div class="text-xs" style="color:rgba(255,255,255,.2)">${u.github_followers} followers</div></td>
+        <td><span style="font-weight:700">${u.deployment_count}</span><span class="text-xs text-muted"> (${u.running_count} live)</span></td>
+        <td><span class="mono text-sm">${u.ram_limit_mb} MB</span></td>
+        <td class="text-xs text-muted">${fmt.date(u.created_at)}</td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${u.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="approve('${u.id}')">Approve</button>` : ''}
+            ${u.status === 'pending' ? `<button class="btn btn-danger btn-sm" onclick="reject('${u.id}')">Reject</button>` : ''}
+            ${u.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="suspend('${u.id}')">Suspend</button>` : ''}
+            ${u.status === 'suspended' ? `<button class="btn btn-success btn-sm" onclick="unsuspend('${u.id}')">Restore</button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="editRes('${u.id}',${u.ram_limit_mb},${u.storage_limit_mb},${u.cpu_limit})">Resources</button>
+            <a href="/admin/user.html?id=${u.id}" class="btn btn-ghost btn-sm">View</a>
+            <button class="btn btn-danger btn-sm" onclick="del('${u.id}','${u.github_username}')">Delete</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) { toast.error(e.message); }
+}
+async function approve(id) { try { await api.post(`/api/admin/users/${id}/approve`); toast.success('Approved'); load(); } catch(e) { toast.error(e.message); } }
+async function reject(id) {
+  if (!await confirm('Reject','Reject this user?','Reject')) return;
+  try { await api.post(`/api/admin/users/${id}/reject`,{reason:'Not approved.'}); toast.info('Rejected'); load(); } catch(e) { toast.error(e.message); }
+}
+async function suspend(id) {
+  if (!await confirm('Suspend User','Suspend this account and stop all their deployments?','Suspend')) return;
+  try { await api.post(`/api/admin/users/${id}/suspend`); toast.warning('Suspended'); load(); } catch(e) { toast.error(e.message); }
+}
+async function unsuspend(id) { try { await api.post(`/api/admin/users/${id}/unsuspend`); toast.success('Account restored'); load(); } catch(e) { toast.error(e.message); } }
+async function del(id, name) {
+  if (!await confirm('Delete User','This will permanently delete @'+name+' and all their deployments and data. Cannot be undone.','Delete Permanently')) return;
+  try { await api.del(`/api/admin/users/${id}`); toast.success('User deleted'); load(); } catch(e) { toast.error(e.message); }
+}
+function editRes(id, ram, storage, cpu) {
+  document.getElementById('resUserId').value = id;
+  document.getElementById('resRam').value = ram;
+  document.getElementById('resStorage').value = storage;
+  document.getElementById('resCpu').value = cpu;
+  modal.open('resModal');
+}
+async function saveRes() {
+  const id = document.getElementById('resUserId').value;
+  try {
+    const u = await api.patch(`/api/admin/users/${id}/resources`, {
+      ram_limit_mb: parseInt(document.getElementById('resRam').value),
+      storage_limit_mb: parseInt(document.getElementById('resStorage').value),
+      cpu_limit: parseFloat(document.getElementById('resCpu').value),
+    });
+    toast.success(`Updated: ${u.github_username} now has ${u.ram_limit_mb} MB RAM`);
+    modal.close('resModal');
+    load();
+  } catch(e) { toast.error(e.message); }
+}
+init();
+</script>
+</body>
+</html>

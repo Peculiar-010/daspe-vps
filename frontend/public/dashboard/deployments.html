@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Deployments — Daspe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/css/main.css"/>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>Daspe</div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Overview</div>
+    <a href="/dashboard/" class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="/dashboard/deployments.html" class="nav-item active"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Deployments</a>
+    <div class="nav-section">Tools</div>
+    <a href="/dashboard/files.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>File Manager</a>
+    <a href="/dashboard/repos.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7"/></svg>GitHub Repos</a>
+    <div class="nav-section">Account</div>
+    <a href="/dashboard/notifications.html" class="nav-item"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span class="nav-badge" id="sideNotifBadge" style="display:none">0</span></a>
+    <a href="/dashboard/settings.html" class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Settings</a>
+    <button class="nav-item" onclick="logout()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </nav>
+  <div class="sidebar-footer"><div class="user-chip"><img class="avatar" id="sidebarAvatar" src="" alt=""/><div class="user-chip-info"><div class="user-chip-name" id="sidebarName">...</div><div class="user-chip-sub">Member</div></div></div></div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="main">
+  <div class="topbar">
+    <button class="mobile-menu-btn" id="mobileMenuBtn"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <span class="topbar-title">Deployments</span>
+    <div class="topbar-actions">
+      <select id="filterStatus" style="width:auto" onchange="loadDeps()"><option value="">All Status</option><option value="running">Running</option><option value="stopped">Stopped</option><option value="failed">Failed</option><option value="building">Building</option></select>
+      <button class="btn btn-primary btn-sm" onclick="modal.open('newDepModal')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Deployment</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header"><h1 class="page-title">Deployments</h1><p class="page-sub" id="depCount">Loading your deployments</p></div>
+    <div id="depsGrid"><div class="loading"><div class="spin"></div>Loading</div></div>
+  </div>
+</div>
+</div>
+
+<!-- NEW DEPLOYMENT MODAL -->
+<div class="overlay" id="newDepModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd"><span class="modal-title">New Deployment</span><button class="modal-close" onclick="modal.close('newDepModal')">&#x2715;</button></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group"><label class="form-label">Project Name</label><input type="text" id="depName" placeholder="my-bot"/></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Type</label><select id="depType"><option value="web">Website / API</option><option value="bot">Bot</option><option value="database">Database</option></select></div>
+        <div class="form-group"><label class="form-label">Runtime</label><select id="depRuntime"><option value="node">Node.js</option><option value="python">Python</option><option value="go">Go</option><option value="php">PHP</option><option value="ruby">Ruby</option><option value="bun">Bun</option><option value="deno">Deno</option><option value="java">Java</option><option value="rust">Rust</option><option value="static">Static HTML</option><option value="custom">Custom Dockerfile</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Subdomain</label><div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"><input type="text" id="depSubdomain" placeholder="my-project" style="border:none;border-radius:0;flex:1"/><span style="padding:9px 12px;background:var(--black-3);color:var(--white-4);font-size:.82rem;white-space:nowrap;border-left:1px solid var(--border)" id="domainSuffix">.daspe.name.ng</span></div></div>
+      <div class="form-group"><label class="form-label">GitHub Repository <span style="color:var(--white-4);font-weight:400">(optional)</span></label><input type="text" id="depRepo" placeholder="username/repo-name"/></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Branch</label><input type="text" id="depBranch" value="main"/></div>
+        <div class="form-group"><label class="form-label">Port</label><input type="number" id="depPort" value="3000"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Build Command <span style="color:var(--white-4);font-weight:400">(optional)</span></label><input type="text" id="depBuild" placeholder="npm install"/></div>
+      <div class="form-group"><label class="form-label">Start Command</label><input type="text" id="depStart" placeholder="npm start"/></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">RAM Limit (MB)</label><input type="number" id="depRam" value="128"/></div>
+        <div class="form-group" style="align-self:end"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--white-3)"><input type="checkbox" id="depAutoDeploy" style="width:auto"/>Auto Deploy on Push</label></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="modal.close('newDepModal')">Cancel</button>
+      <button class="btn btn-primary" id="createDepBtn" onclick="createDep()">Create Deployment</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/app.js"></script>
+<script>
+let user = null;
+const BASE = location.hostname;
+
+async function init() {
+  user = await checkAuth('/');
+  if (!user || user.status !== 'active') return window.location.href = user?.status === 'pending' ? '/pending.html' : '/';
+  document.getElementById('sidebarAvatar').src = user.avatar || '';
+  document.getElementById('sidebarName').textContent = user.username;
+  initSidebar();
+  await loadDeps();
+  updateNotifBadge();
+  if (new URLSearchParams(location.search).get('new')) modal.open('newDepModal');
+}
+
+async function loadDeps() {
+  const status = document.getElementById('filterStatus').value;
+  try {
+    let deps = await api.get('/api/deployments');
+    if (status) deps = deps.filter(d => d.status === status);
+    document.getElementById('depCount').textContent = `${deps.length} deployment${deps.length !== 1 ? 's' : ''}`;
+    if (!deps.length) {
+      document.getElementById('depsGrid').innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><h3>No deployments${status ? ' matching filter' : ' yet'}</h3><p>Deploy a website, API, bot or database</p><button class="btn btn-primary" onclick="modal.open('newDepModal')">Create Deployment</button></div>`;
+      return;
+    }
+    document.getElementById('depsGrid').innerHTML = `<div class="deps-grid">${deps.map(depCard).join('')}</div>`;
+  } catch(e) { toast.error(e.message); }
+}
+
+function depCard(d) {
+  const domain = `${d.subdomain}.${BASE.replace(/^[^.]+\./,'')}`;
+  return `<a class="dep-card" href="/dashboard/deployment.html?id=${d.id}">
+    <div class="dep-card-top"><div><div class="dep-name">${d.name}</div><div class="dep-type">${fmt.runtime(d.runtime)} &middot; ${d.type}</div></div>${fmt.badge(d.status)}</div>
+    <div class="dep-url">${domain}</div>
+    <div class="dep-tags"><span class="tag">${d.ram_limit_mb} MB</span>${d.github_repo?`<span class="tag">${d.github_repo.split('/')[1]}</span>`:''} ${d.auto_deploy?'<span class="tag">Auto Deploy</span>':''}</div>
+    <div class="dep-foot"><span>${d.deployed_at ? fmt.ago(d.deployed_at) : 'Not deployed'}</span><span>${d.live_ram_mb ? d.live_ram_mb.toFixed(0)+' MB RAM live' : ''}</span></div>
+  </a>`;
+}
+
+async function createDep() {
+  const btn = document.getElementById('createDepBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    const body = {
+      name: document.getElementById('depName').value.trim(),
+      type: document.getElementById('depType').value,
+      runtime: document.getElementById('depRuntime').value,
+      subdomain: document.getElementById('depSubdomain').value.trim().toLowerCase(),
+      github_repo: document.getElementById('depRepo').value.trim() || null,
+      github_branch: document.getElementById('depBranch').value.trim() || 'main',
+      port: parseInt(document.getElementById('depPort').value) || 3000,
+      build_command: document.getElementById('depBuild').value.trim() || null,
+      start_command: document.getElementById('depStart').value.trim() || null,
+      ram_limit_mb: parseInt(document.getElementById('depRam').value) || 128,
+      auto_deploy: document.getElementById('depAutoDeploy').checked,
+    };
+    if (!body.name || !body.subdomain) { toast.error('Name and subdomain are required'); return; }
+    const dep = await api.post('/api/deployments', body);
+    toast.success('Deployment created');
+    modal.close('newDepModal');
+    window.location.href = `/dashboard/deployment.html?id=${dep.id}`;
+  } catch(e) { toast.error(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Create Deployment'; }
+}
+init();
+</script>
+</body>
+</html>
