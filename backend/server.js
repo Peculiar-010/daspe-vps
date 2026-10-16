@@ -25,6 +25,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:', 'https://avatars.githubusercontent.com'],
@@ -60,7 +61,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
@@ -110,13 +111,24 @@ app.use('/admin', async (req, res, next) => {
     }
 
     // Admin account confirmed — check if 2FA is verified this session
-    if (!req.session.adminVerified) {
-      // Serve the 2FA gate page regardless of which admin page they requested
-      return res.sendFile(path.join(__dirname, '../frontend/public/admin/gate.html'));
+    // Never allow a stale session to bypass initial TOTP setup.
+    if (!user.totp_enabled) {
+      req.session.adminVerified = false;
+      req.session.adminVerifiedAt = null;
+      return res.sendFile(
+        path.join(__dirname, '../frontend/public/admin/gate.html')
+      );
     }
 
-    // All good — serve normally
-    next();
+    if (!req.session.adminVerified) {
+      // Serve the gate and stop this middleware chain.
+      return res.sendFile(
+        path.join(__dirname, '../frontend/public/admin/gate.html')
+      );
+    }
+
+    // Admin identity and 2FA session are verified.
+    return next();
   } catch (err) {
     console.error('Admin gate error:', err.message);
     return res.status(404).end();

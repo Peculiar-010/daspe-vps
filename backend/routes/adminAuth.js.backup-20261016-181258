@@ -1,0 +1,90 @@
+const express = require('express');
+const speakeasy = require('speakeasy');
+const bcrypt = require('bcrypt');
+const { query } = require('../config/database');
+const { checkAdminIdentity, verifyAdminCredentials } = require('../middleware/adminAuth');
+const { authLimiter } = require('../middleware/security');
+const audit = require('../utils/audit');
+
+const router = express.Router();
+
+// All admin auth routes rate-limited hard
+
+
+// Check if requester is the admin GitHub user (returns 404 if not)
+// Frontend calls this to know whether to show the login screen
+router.get('/admin-check', checkAdminIdentity, (req, res) => {
+  res.json({
+    ok: true,
+    username: req.adminUser.github_username,
+    totp_enabled: req.adminUser.totp_enabled,
+    admin_verified: !!req.session.adminVerified
+  });
+});
+
+// Verify password + TOTP to unlock admin session
+router.post('/admin-verify', checkAdminIdentity, verifyAdminCredentials);
+
+// Set up TOTP (first time) — only accessible when password is already verified
+router.post('/admin-totp-setup', checkAdminIdentity, async (req, res) => {
+  // Must have verified password at minimum (session flag set separately)
+  const { password } = req.body;
+  const hash = process.env.ADMIN_PASSWORD_HASH;
+  if (!hash) return res.status(500).json({ error: 'Not configured' });
+
+  const ok = await bcrypt.compare(password, hash);
+  if (!ok) return res.status(401).json({ error: 'Wrong password' });
+
+  try {
+    const secret = speakeasy.generateSecret({
+      name: `Daspe Admin (${req.adminUser.github_username})`,
+      issuer: 'Daspe',
+      length: 20 // gives a clean 32-char base32 key
+    });
+
+    // Save secret temporarily in session until confirmed
+    req.session.pendingTotpSecret = secret.base32;
+
+    // Return only the secret key — no QR, user types it manually
+    res.json({ secret: secret.base32 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Confirm TOTP setup with first code
+router.post('/admin-totp-confirm', checkAdminIdentity, async (req, res) => {
+  const { code, password } = req.body;
+  const hash = process.env.ADMIN_PASSWORD_HASH;
+
+  const ok = await bcrypt.compare(password, hash);
+  if (!ok) return res.status(401).json({ error: 'Wrong password' });
+
+  const secret = req.session.pendingTotpSecret;
+  if (!secret) return res.status(400).json({ error: 'No pending TOTP setup' });
+
+  const valid = speakeasy.totp.verify({ secret, encoding: 'base32', token: code.replace(/\s/g, ''), window: 1 });
+  if (!valid) return res.status(401).json({ error: 'Invalid code — try again' });
+
+  try {
+    await query(`UPDATE users SET totp_secret = $1, totp_enabled = true WHERE id = $2`, [secret, req.adminUser.id]);
+    req.session.pendingTotpSecret = null;
+    req.session.adminVerified = true;
+    req.session.adminVerifiedAt = Date.now();
+
+    await audit.log({ userId: req.adminUser.id, action: 'admin_totp_enabled', req });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sign out of admin session only (keeps GitHub session)
+router.post('/admin-signout', checkAdminIdentity, async (req, res) => {
+  req.session.adminVerified = false;
+  req.session.adminVerifiedAt = null;
+  await audit.log({ userId: req.adminUser.id, action: 'admin_logout', req });
+  res.json({ success: true });
+});
+
+module.exports = router;

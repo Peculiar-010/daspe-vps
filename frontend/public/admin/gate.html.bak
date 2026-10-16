@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin Access — Daspe</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;background:#000;color:#fff;-webkit-font-smoothing:antialiased}
+body{display:flex;align-items:center;justify-content:center;padding:20px;min-height:100vh}
+.card{background:#0e0e0e;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px 32px;width:100%;max-width:400px}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.logo-mark{width:32px;height:32px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-mark svg{width:17px;height:17px}
+.logo-label{font-size:1rem;font-weight:800}
+.logo-badge{margin-left:auto;padding:3px 10px;border-radius:50px;font-size:.68rem;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+h1{font-size:1.3rem;font-weight:800;margin-bottom:6px}
+.sub{font-size:.85rem;color:rgba(255,255,255,.4);margin-bottom:24px;line-height:1.5}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.form-label{font-size:.78rem;font-weight:600;color:rgba(255,255,255,.4)}
+.input-wrap{position:relative;display:flex;align-items:center}
+input[type=password],input[type=text]{width:100%;padding:12px 44px 12px 14px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#fff;font-size:.92rem;font-family:'Inter',sans-serif;outline:none;-webkit-appearance:none}
+input:focus{border-color:rgba(255,255,255,.2)}
+.show-btn{position:absolute;right:12px;background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;padding:4px;display:flex}
+.show-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.btn{width:100%;padding:13px;border-radius:8px;font-size:.92rem;font-weight:700;cursor:pointer;border:none;background:#fff;color:#000;font-family:'Inter',sans-serif;margin-top:4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:block}
+.btn:active{opacity:.8}
+.btn:disabled{opacity:.5}
+.error{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#f87171;margin-bottom:14px;display:none}
+.step{display:none}.step.active{display:block}
+.note{display:flex;align-items:center;gap:8px;font-size:.72rem;color:rgba(255,255,255,.2);margin-top:20px}
+.note svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.totp-hint{font-size:.75rem;color:rgba(255,255,255,.3);text-align:center;margin-top:12px;line-height:1.6}
+input.mono{font-family:monospace;letter-spacing:.2em;font-size:1.1rem;text-align:center;padding:14px}
+.secret-wrap{background:#141414;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:20px;margin:16px 0;text-align:center}
+.secret-label{font-size:.7rem;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.secret-key{font-family:monospace;font-size:1rem;font-weight:700;color:#fff;letter-spacing:.2em;word-break:break-all;line-height:2;user-select:all}
+.secret-hint{font-size:.72rem;color:rgba(255,255,255,.25);margin-top:10px;line-height:1.5}
+.copy-btn{margin-top:12px;padding:8px 18px;border-radius:7px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);font-size:.78rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-row">
+    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    <span class="logo-label">Daspe</span>
+    <span class="logo-badge">ADMIN</span>
+  </div>
+  <div class="error" id="errBox"></div>
+  <div class="step active" id="step-password">
+    <h1>Admin Access</h1>
+    <p class="sub">Enter your admin password to continue. Session expires after 4 hours.</p>
+    <div class="form-group">
+      <label class="form-label">Admin Password</label>
+      <div class="input-wrap">
+        <input type="password" id="pwInput" placeholder="Enter admin password" autocomplete="current-password"/>
+        <button class="show-btn" type="button" onclick="var i=document.getElementById('pwInput');i.type=i.type==='password'?'text':'password'">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="btn" type="button" id="continueBtn" onclick="submitPassword()">Continue</button>
+    <div class="note"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Only visible to the admin GitHub account</div>
+  </div>
+  <div class="step" id="step-totp">
+    <h1>Two-Factor Auth</h1>
+    <p class="sub">Open your authenticator app and enter the 6-digit code for Daspe Admin.</p>
+    <div class="form-group">
+      <label class="form-label">6-Digit Code</label>
+      <input type="text" class="mono" id="totpInput" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"/>
+    </div>
+    <button class="btn" type="button" id="totpBtn" onclick="submitTotp()">Verify</button>
+    <p class="totp-hint">Code refreshes every 30 seconds. If it fails wait for the next code.</p>
+  </div>
+  <div class="step" id="step-setup">
+    <h1>Set Up 2FA</h1>
+    <p class="sub">Add a new account in your authenticator app using the key below, then confirm with your first code.</p>
+    <div class="secret-wrap">
+      <div class="secret-label">Your Secret Key</div>
+      <div class="secret-key" id="secretKey">Loading...</div>
+      <div class="secret-hint">Type this into your authenticator app under Enter setup key or Manual entry.</div>
+      <button class="copy-btn" type="button" id="copyBtn" onclick="copySecret()">Copy Key</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm with your first code</label>
+      <input type="text" class="mono" id="setupInput" placeholder="000000" maxlength="6" inputmode="numeric"/>
+    </div>
+    <button class="btn" type="button" id="setupBtn" onclick="confirmSetup()">Activate 2FA and Enter</button>
+  </div>
+</div>
+<script>
+var totpEnabled=false,pendingPassword='',currentSecret='';
+function err(m){var b=document.getElementById('errBox');b.textContent=m;b.style.display='block';}
+function clearErr(){var b=document.getElementById('errBox');b.style.display='none';b.textContent='';}
+function go(name){document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});document.getElementById('step-'+name).classList.add('active');clearErr();}
+function setBtn(id,text,dis){var b=document.getElementById(id);if(b){b.textContent=text;b.disabled=dis;}}
+window.addEventListener('load',function(){
+  fetch('/auth/admin-check',{method:'GET',credentials:'include'})
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(d){if(!d){document.body.innerHTML='';return;}totpEnabled=d.totp_enabled;if(d.admin_verified)window.location.href='/admin/';})
+  .catch(function(){document.body.innerHTML='';});
+  document.getElementById('pwInput').addEventListener('keydown',function(e){if(e.key==='Enter')submitPassword();});
+  document.getElementById('totpInput').addEventListener('keydown',function(e){if(e.key==='Enter')submitTotp();});
+  document.getElementById('setupInput').addEventListener('keydown',function(e){if(e.key==='Enter')confirmSetup();});
+});
+function submitPassword(){
+  var pw=document.getElementById('pwInput').value;
+  if(!pw){err('Enter your password');return;}
+  setBtn('continueBtn','Checking...',true);clearErr();
+  fetch('/auth/admin-verify',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,totp_code:null})})
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+  .then(function(res){
+    if(res.ok&&res.d.success){window.location.href='/admin/';return;}
+    if(res.d.totp_required){pendingPassword=pw;go('totp');setBtn('continueBtn','Continue',false);return;}
+    if(!totpEnabled){pendingPassword=pw;loadSetup();return;}
+    err(res.d.error||'Incorrect password');setBtn('continueBtn','Continue',false);
+  })
+  .catch(function(e){err('Network error: '+e.message);setBtn('continueBtn','Continue',false);});
+}
+function submitTotp(){
+  var code=document.getElementById('totpInput').value.replace(/\D/g,'');
+  if(code.length!==6){err('Enter a 6-digit code');return;}
+  setBtn('totpBtn','Verifying...',true);clearErr();
+  fetch('/auth/admin-verify',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pendingPassword,totp_code:code})})
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+  .then(function(res){
+    if(res.ok&&res.d.success){window.location.href='/admin/';return;}
+    err(res.d.error||'Invalid code');setBtn('totpBtn','Verify',false);document.getElementById('totpInput').value='';
+  })
+  .catch(function(){err('Network error');setBtn('totpBtn','Verify',false);});
+}
+function loadSetup(){
+  fetch('/auth/admin-totp-setup',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pendingPassword})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.error){err(d.error);setBtn('continueBtn','Continue',false);return;}
+    currentSecret=d.secret;
+    document.getElementById('secretKey').textContent=d.secret.replace(/(.{4})/g,'$1 ').trim();
+    go('setup');
+  })
+  .catch(function(){err('Could not load setup');setBtn('continueBtn','Continue',false);});
+}
+function confirmSetup(){
+  var code=document.getElementById('setupInput').value.replace(/\D/g,'');
+  if(code.length!==6){err('Enter the 6-digit code from your app');return;}
+  setBtn('setupBtn','Activating...',true);clearErr();
+  fetch('/auth/admin-totp-confirm',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pendingPassword,code:code})})
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
+  .then(function(res){
+    if(res.ok&&res.d.success){window.location.href='/admin/';return;}
+    err(res.d.error||'Invalid code');setBtn('setupBtn','Activate 2FA and Enter',false);
+  })
+  .catch(function(){err('Error. Try again.');setBtn('setupBtn','Activate 2FA and Enter',false);});
+}
+function copySecret(){
+  if(!currentSecret)return;
+  var btn=document.getElementById('copyBtn');
+  if(navigator.clipboard){navigator.clipboard.writeText(currentSecret).then(function(){btn.textContent='Copied';setTimeout(function(){btn.textContent='Copy Key';},2000);});}
+  else{var t=document.createElement('textarea');t.value=currentSecret;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);btn.textContent='Copied';setTimeout(function(){btn.textContent='Copy Key';},2000);}
+}
+</script>
+</body>
+</html>

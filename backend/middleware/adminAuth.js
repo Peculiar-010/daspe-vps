@@ -35,6 +35,13 @@ const requireAdminSession = async (req, res, next) => {
       return hard404(res);
     }
 
+    // TOTP must be configured before admin APIs are accessible.
+    if (!user.totp_enabled || !user.totp_secret) {
+      req.session.adminVerified = false;
+      req.session.adminVerifiedAt = null;
+      return res.status(403).json({ error: 'ADMIN_TOTP_SETUP_REQUIRED' });
+    }
+
     // Layer 3: Must have completed admin 2FA this session
     if (!req.session.adminVerified) {
       return res.status(403).json({ error: 'ADMIN_2FA_REQUIRED' });
@@ -90,6 +97,13 @@ const verifyAdminCredentials = async (req, res) => {
         req
       });
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Require TOTP setup before granting any verified admin session.
+    if (!req.adminUser.totp_enabled || !req.adminUser.totp_secret) {
+      req.session.adminVerified = false;
+      req.session.adminVerifiedAt = null;
+      return res.json({ success: false, setup_required: true });
     }
 
     // Check TOTP if enabled

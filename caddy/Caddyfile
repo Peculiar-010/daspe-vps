@@ -1,0 +1,71 @@
+
+# Daspe Platform - Auto-generated Caddy config
+# DO NOT EDIT MANUALLY
+
+# Global options
+{
+  email admin@daspe.name.ng
+  admin off
+}
+
+# Main platform site
+daspe.name.ng {
+  root * /home/ubuntu/daspe/frontend/public
+  file_server
+  encode gzip
+  header {
+    X-Frame-Options DENY
+    X-Content-Type-Options nosniff
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy strict-origin-when-cross-origin
+    Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+    -Server
+  }
+  # API proxy
+  handle /api/* {
+    reverse_proxy 127.0.0.1:3000
+  }
+  handle /auth/* {
+    reverse_proxy 127.0.0.1:3000
+  }
+  handle /webhook/* {
+    reverse_proxy 127.0.0.1:3000
+  }
+  # Block sensitive paths
+  @blocked {
+    path /.env /.env.* /.git/* /.htaccess /.DS_Store /config/* *.sql *.log
+  }
+  respond @blocked 403
+  # Try files, fallback to index for SPA
+  try_files {path} {path}/ /index.html
+}
+
+# www redirect
+www.daspe.name.ng {
+  redir https://daspe.name.ng{uri} permanent
+}
+
+# User deployment routes
+
+test-vibe.daspe.name.ng {
+  reverse_proxy daspe-b2457c2a-854d-480d-bca8-c622092b3f88:3000 {
+    health_uri /
+    health_interval 30s
+    fail_duration 10s
+  }
+  encode gzip
+  header {
+    X-Frame-Options DENY
+    X-Content-Type-Options nosniff
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy strict-origin-when-cross-origin
+    -Server
+  }
+  # Block sensitive files
+  @blocked {
+    path /.env /.env.* /.git/* /.htaccess /.DS_Store /config/* *.sql *.log
+    path_regexp sensitive \.(env|git|htaccess|DS_Store|sql|log|bak|backup|conf|config|ini|key|pem|cert|crt)$
+  }
+  respond @blocked 403
+}
+

@@ -135,7 +135,7 @@ router.get('/github/callback', authLimiter, (req, res, next) => {
         return res.redirect('/?error=account_suspended');
       }
       if (user.role === 'admin') {
-        return res.redirect('/admin/index.html');
+        return res.redirect('/admin/');
       }
       return res.redirect('/dashboard/index.html');
     });

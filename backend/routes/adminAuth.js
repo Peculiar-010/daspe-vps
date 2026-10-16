@@ -9,16 +9,21 @@ const audit = require('../utils/audit');
 const router = express.Router();
 
 // All admin auth routes rate-limited hard
-router.use(authLimiter);
+
 
 // Check if requester is the admin GitHub user (returns 404 if not)
 // Frontend calls this to know whether to show the login screen
 router.get('/admin-check', checkAdminIdentity, (req, res) => {
+  const totpEnabled = !!req.adminUser.totp_enabled && !!req.adminUser.totp_secret;
+  if (!totpEnabled) {
+    req.session.adminVerified = false;
+    req.session.adminVerifiedAt = null;
+  }
   res.json({
     ok: true,
     username: req.adminUser.github_username,
-    totp_enabled: req.adminUser.totp_enabled,
-    admin_verified: !!req.session.adminVerified
+    totp_enabled: totpEnabled,
+    admin_verified: totpEnabled && !!req.session.adminVerified
   });
 });
 
