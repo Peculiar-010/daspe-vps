@@ -5,6 +5,7 @@ const fs = require('fs').promises;
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const axios = require('axios');
 const { query } = require('../config/database');
 const { requireApproved, requireDeploymentOwner } = require('../middleware/auth');
 const { deployLimiter, buildLimiter, validateSubdomain, checkQuota, auditMiddleware } = require('../middleware/security');
@@ -16,6 +17,102 @@ const audit = require('../utils/audit');
 
 const router = express.Router();
 const DEPLOYMENTS_PATH = process.env.DEPLOYMENTS_PATH || '/home/ubuntu/daspe/deployments-data';
+
+const GITHUB_API = 'https://api.github.com';
+
+async function registerGithubWebhook(dep, token) {
+  if (!token) {
+    throw new Error('GitHub account token is missing. Reconnect GitHub and try again.');
+  }
+
+  const repo = String(dep.github_repo || '').trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) {
+    throw new Error('A valid GitHub repository in owner/repository format is required.');
+  }
+  if (!dep.github_webhook_secret) {
+    throw new Error('Webhook secret is missing for this deployment.');
+  }
+
+  const configuredBase = (
+    process.env.PUBLIC_BASE_URL ||
+    process.env.FRONTEND_URL ||
+    ('https://' + (process.env.BASE_DOMAIN || 'daspe.name.ng'))
+  ).replace(/\/+$/, '');
+
+  const callbackUrl = `${configuredBase}/api/deployments/${dep.id}/webhook`;
+  const [owner, name] = repo.split('/');
+  const endpoint = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/hooks`;
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+
+  const config = {
+    url: callbackUrl,
+    content_type: 'json',
+    secret: dep.github_webhook_secret,
+    insecure_ssl: '0'
+  };
+
+  try {
+    const existing = await axios.get(endpoint, {
+      headers,
+      params: { per_page: 100 },
+      timeout: 15000
+    });
+
+    const hook = (existing.data || []).find(
+      item => item.config && item.config.url === callbackUrl
+    );
+
+    if (hook) {
+      await axios.patch(`${endpoint}/${hook.id}`, {
+        name: 'web',
+        active: true,
+        events: ['push'],
+        config
+      }, { headers, timeout: 15000 });
+
+      return { success: true, url: callbackUrl, action: 'updated' };
+    }
+
+    await axios.post(endpoint, {
+      name: 'web',
+      active: true,
+      events: ['push'],
+      config
+    }, { headers, timeout: 15000 });
+
+    return { success: true, url: callbackUrl, action: 'created' };
+  } catch (err) {
+    const status = err.response && err.response.status;
+    const detail = err.response && err.response.data &&
+      (err.response.data.message || err.response.data.errors?.[0]?.message);
+
+    if (status === 401 || status === 403) {
+      throw new Error(
+        `GitHub denied webhook management${detail ? ': ' + detail : ''}. ` +
+        'Check repository access and OAuth permissions.'
+      );
+    }
+
+    throw new Error(
+      `GitHub webhook setup failed${status ? ' (HTTP ' + status + ')' : ''}` +
+      `${detail ? ': ' + detail : ': ' + err.message}`
+    );
+  }
+}
+
+async function getDeploymentGithubToken(userId) {
+  const result = await query(
+    'SELECT github_access_token FROM users WHERE id = $1',
+    [userId]
+  );
+  return result.rows[0]?.github_access_token || null;
+}
+
 
 // File upload config — no size limit, quota enforced separately
 const storage = multer.diskStorage({
@@ -138,19 +235,49 @@ router.post('/', requireApproved, deployLimiter, async (req, res) => {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       RETURNING *`,
       [
-        req.user.id, name, type || 'web', runtime || 'node', subdomain,
+        req.user.id, name, type || 'web', runtime || 'auto', subdomain,
         github_repo || null, github_branch || 'main',
         build_command || null, start_command || null,
-        parseInt(port) || 3000, requestedRam, auto_deploy || false,
+        runtime === 'auto' || !runtime
+          ? (port ? parseInt(port, 10) || null : null)
+          : (parseInt(port, 10) || (runtime === 'static' || runtime === 'php' ? 80 :
+             runtime === 'python' || runtime === 'deno' ? 8000 :
+             runtime === 'go' || runtime === 'java' || runtime === 'rust' ? 8080 :
+             runtime === 'ruby' ? 4567 : 3000)),
+        requestedRam, auto_deploy || false,
         health_check_url || null, sleep_after_minutes || 0, webhookSecret
       ]
     );
 
-    const dep = result.rows[0];
+    let dep = result.rows[0];
     await fs.mkdir(path.join(DEPLOYMENTS_PATH, dep.id, 'src'), { recursive: true });
 
+    let webhook_warning = null;
+    if (dep.auto_deploy && dep.github_repo) {
+      try {
+        const token = await getDeploymentGithubToken(req.user.id);
+        const webhook = await registerGithubWebhook(dep, token);
+        console.log(`GitHub webhook ${webhook.action} for deployment ${dep.id}`);
+      } catch (err) {
+        webhook_warning = err.message;
+        await query(
+          'UPDATE deployments SET auto_deploy = FALSE WHERE id = $1',
+          [dep.id]
+        );
+        dep.auto_deploy = false;
+        console.error(`GitHub webhook setup failed for deployment ${dep.id}:`, err.message);
+      }
+    } else if (dep.auto_deploy && !dep.github_repo) {
+      webhook_warning = 'Select a GitHub repository to enable automatic deployments.';
+      await query(
+        'UPDATE deployments SET auto_deploy = FALSE WHERE id = $1',
+        [dep.id]
+      );
+      dep.auto_deploy = false;
+    }
+
     await audit.log({ userId: req.user.id, action: 'deployment_created', resourceType: 'deployment', resourceId: dep.id, req });
-    res.status(201).json(dep);
+    res.status(201).json({ ...dep, ...(webhook_warning ? { webhook_warning } : {}) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -165,7 +292,7 @@ router.patch('/:id', requireApproved, requireDeploymentOwner, async (req, res) =
       return res.status(400).json({ error: 'Unsafe build command' });
     }
 
-    await query(
+    const updated = await query(
       `UPDATE deployments SET
         name = COALESCE($1, name),
         github_repo = COALESCE($2, github_repo),
@@ -176,12 +303,34 @@ router.patch('/:id', requireApproved, requireDeploymentOwner, async (req, res) =
         auto_deploy = COALESCE($7, auto_deploy),
         health_check_url = COALESCE($8, health_check_url),
         sleep_after_minutes = COALESCE($9, sleep_after_minutes)
-       WHERE id = $10`,
+       WHERE id = $10
+       RETURNING *`,
       [name, github_repo, github_branch, build_command, start_command,
        port ? parseInt(port) : null, auto_deploy, health_check_url, sleep_after_minutes, req.params.id]
     );
 
-    res.json({ success: true });
+    let dep = updated.rows[0];
+    if (!dep) return res.status(404).json({ error: 'Deployment not found' });
+
+    if (dep.auto_deploy) {
+      try {
+        const token = await getDeploymentGithubToken(req.user.id);
+        await registerGithubWebhook(dep, token);
+      } catch (err) {
+        await query(
+          'UPDATE deployments SET auto_deploy = FALSE WHERE id = $1',
+          [dep.id]
+        );
+        console.error(`GitHub webhook setup failed for deployment ${dep.id}:`, err.message);
+        return res.status(400).json({
+          success: false,
+          auto_deploy: false,
+          error: err.message
+        });
+      }
+    }
+
+    res.json({ success: true, auto_deploy: dep.auto_deploy });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -497,8 +646,16 @@ router.post('/:id/webhook', async (req, res) => {
     const sig = req.headers['x-hub-signature-256'];
     if (!sig || !dep.github_webhook_secret) return res.status(401).json({ error: 'No signature' });
 
-    const expected = `sha256=${crypto.createHmac('sha256', dep.github_webhook_secret).update(JSON.stringify(req.body)).digest('hex')}`;
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    if (!req.rawBody || !/^sha256=[a-f0-9]{64}$/i.test(sig)) {
+      return res.status(401).json({ error: 'Invalid webhook signature format or missing raw body' });
+    }
+
+    const expected = `sha256=${crypto.createHmac('sha256', dep.github_webhook_secret).update(req.rawBody).digest('hex')}`;
+    const suppliedBuffer = Buffer.from(sig, 'utf8');
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+
+    if (suppliedBuffer.length !== expectedBuffer.length ||
+        !crypto.timingSafeEqual(suppliedBuffer, expectedBuffer)) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 

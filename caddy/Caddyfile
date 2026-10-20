@@ -47,8 +47,8 @@ www.daspe.name.ng {
 
 # User deployment routes
 
-test-vibe.daspe.name.ng {
-  reverse_proxy daspe-b2457c2a-854d-480d-bca8-c622092b3f88:3000 {
+youtube-dwnl.daspe.name.ng {
+  reverse_proxy daspe-e042085a-6eb4-4410-81bf-349dc0b722a1:3000 {
     health_uri /
     health_interval 30s
     fail_duration 10s

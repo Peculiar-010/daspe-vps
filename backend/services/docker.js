@@ -89,10 +89,10 @@ const RUNTIME_CONFIGS = {
     defaultPort: 8080,
   },
   static: {
-    baseImage: 'nginx:alpine',
+    baseImage: 'nginxinc/nginx-unprivileged:alpine',
     defaultBuildCommand: '',
-    defaultStartCommand: 'nginx -g "daemon off;"',
-    defaultPort: 80,
+    defaultStartCommand: 'nginx -g daemon off;',
+    defaultPort: 8080,
   },
   custom: {
     baseImage: null,
@@ -109,9 +109,32 @@ const generateDockerfile = (deployment, envVars = {}) => {
     return null; // User provides their own Dockerfile
   }
 
-  const envLines = Object.entries(envVars)
-    .map(([k, v]) => `ENV ${k}="${v.replace(/"/g, '\\"')}"`)
-    .join('\n');
+  // Static sites use the stock Nginx server configuration.
+  // Runtime environment variables are supplied through Docker's Env settings,
+  // not embedded in generated Dockerfile instructions.
+  if (deployment.runtime === 'static') {
+    if (deployment.detectedFramework === 'vite') {
+      return `FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM nginxinc/nginx-unprivileged:alpine
+COPY --from=build /app/dist/ /usr/share/nginx/html/
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]
+`;
+    }
+
+    return `FROM nginxinc/nginx-unprivileged:alpine
+COPY . /usr/share/nginx/html/
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]
+`;
+  }
+
 
   return `FROM ${config.baseImage}
 
@@ -123,9 +146,6 @@ WORKDIR /app
 
 # Copy files
 COPY . .
-
-# Set environment variables
-${envLines}
 
 # Install dependencies
 ${deployment.build_command ? `RUN ${deployment.build_command}` : (config.defaultBuildCommand ? `RUN ${config.defaultBuildCommand}` : '# No build step')}
@@ -174,7 +194,12 @@ const startContainer = async (deployment, imageName, envVars = {}) => {
     await existing.remove({ force: true }).catch(() => {});
   } catch (_) {}
 
-  const envArray = Object.entries(envVars).map(([k, v]) => `${k}=${v}`);
+  // Pass the selected internal port to applications that use PORT.
+  // Preserve an explicitly configured PORT if the user supplied one.
+  const containerEnv = { ...envVars };
+  if (!containerEnv.PORT) containerEnv.PORT = String(port);
+
+  const envArray = Object.entries(containerEnv).map(([k, v]) => `${k}=${v}`);
 
   const container = await docker.createContainer({
     name: containerName,

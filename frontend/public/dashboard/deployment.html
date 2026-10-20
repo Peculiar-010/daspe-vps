@@ -17,10 +17,10 @@
 .dep-live-card{background:var(--black-3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
 .dep-live-stat .lbl{font-size:.7rem;font-weight:600;color:var(--white-4);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
 .dep-live-stat .val{font-size:1.2rem;font-weight:800;letter-spacing:-.03em}
-.webhook-box{background:var(--black);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-family:var(--mono);font-size:.75rem;color:var(--white-3);word-break:break-all;display:flex;align-items:center;gap:10px}
-.webhook-box span{flex:1}
-.copy-btn{flex-shrink:0;padding:4px 8px;border-radius:5px;background:var(--white-5);border:none;cursor:pointer;color:var(--white-3);font-size:.72rem;transition:all .2s}
-.copy-btn:hover{background:var(--border-2);color:var(--white)}
+
+
+
+
 </style>
 </head>
 <body>
@@ -68,8 +68,7 @@
         <div class="card"><div class="section-hd" style="margin-bottom:14px"><h3>Resource Usage</h3></div><div id="liveRes"><div class="loading"><div class="spin"></div></div></div></div>
         <div class="card"><div class="section-hd" style="margin-bottom:14px"><h3>Uptime</h3></div><div id="uptimeView"><div class="loading"><div class="spin"></div></div></div></div>
       </div>
-      <div class="card"><div class="section-hd"><h3>Webhook URL</h3><button class="btn btn-ghost btn-sm" onclick="copyWebhook()">Copy</button></div><p class="text-xs text-muted" style="margin-bottom:10px">Add this URL to your GitHub repository webhook settings to enable auto deploy</p><div class="webhook-box"><span id="webhookUrl">Loading...</span><button class="copy-btn" onclick="copyWebhook()">Copy</button></div></div>
-    </div>
+</div>
 
     <div id="tab-logs" style="display:none">
       <div class="card" style="margin-bottom:14px">
@@ -184,7 +183,7 @@ async function loadDep() {
     document.getElementById('breadcrumbName').textContent = dep.name;
     const BASE = location.hostname.replace(/^[^.]+\./,'');
     const domain = `${dep.subdomain}.${BASE}`;
-    document.getElementById('webhookUrl').textContent = `https://${BASE}/api/deployments/${depId}/webhook`;
+
     document.getElementById('depHero').innerHTML = `
       <div class="dep-hero">
         <div class="dep-hero-top">
@@ -381,10 +380,6 @@ function startLogs() {
   logStream.onerror = () => { box.textContent += '\n[Connection lost — click Reconnect]'; };
 }
 
-function copyWebhook() {
-  const t = document.getElementById('webhookUrl').textContent;
-  navigator.clipboard.writeText(t).then(() => toast.success('Copied to clipboard'));
-}
 
 function switchTab(t) {
   document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');

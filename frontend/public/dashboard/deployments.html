@@ -50,13 +50,13 @@
       <div class="form-group"><label class="form-label">Project Name</label><input type="text" id="depName" placeholder="my-bot"/></div>
       <div class="grid-2">
         <div class="form-group"><label class="form-label">Type</label><select id="depType"><option value="web">Website / API</option><option value="bot">Bot</option><option value="database">Database</option></select></div>
-        <div class="form-group"><label class="form-label">Runtime</label><select id="depRuntime"><option value="node">Node.js</option><option value="python">Python</option><option value="go">Go</option><option value="php">PHP</option><option value="ruby">Ruby</option><option value="bun">Bun</option><option value="deno">Deno</option><option value="java">Java</option><option value="rust">Rust</option><option value="static">Static HTML</option><option value="custom">Custom Dockerfile</option></select></div>
+        <div class="form-group"><label class="form-label">Runtime</label><select id="depRuntime" onchange="togglePortField()"><option value="auto" selected>Auto Detect (Recommended)</option><option value="node">Node.js</option><option value="python">Python</option><option value="go">Go</option><option value="php">PHP</option><option value="ruby">Ruby</option><option value="bun">Bun</option><option value="deno">Deno</option><option value="java">Java</option><option value="rust">Rust</option><option value="static">Static HTML</option><option value="custom">Custom Dockerfile</option></select></div>
       </div>
       <div class="form-group"><label class="form-label">Subdomain</label><div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"><input type="text" id="depSubdomain" placeholder="my-project" style="border:none;border-radius:0;flex:1"/><span style="padding:9px 12px;background:var(--black-3);color:var(--white-4);font-size:.82rem;white-space:nowrap;border-left:1px solid var(--border)" id="domainSuffix">.daspe.name.ng</span></div></div>
       <div class="form-group"><label class="form-label">GitHub Repository <span style="color:var(--white-4);font-weight:400">(optional)</span></label><input type="text" id="depRepo" placeholder="username/repo-name"/></div>
       <div class="grid-2">
         <div class="form-group"><label class="form-label">Branch</label><input type="text" id="depBranch" value="main"/></div>
-        <div class="form-group"><label class="form-label">Port</label><input type="number" id="depPort" value="3000"/></div>
+        <div class="form-group" id="depPortGroup" style="display:none"><label class="form-label">Port Override (optional)</label><input type="number" id="depPort" placeholder="Auto-detected"/></div>
       </div>
       <div class="form-group"><label class="form-label">Build Command <span style="color:var(--white-4);font-weight:400">(optional)</span></label><input type="text" id="depBuild" placeholder="npm install"/></div>
       <div class="form-group"><label class="form-label">Start Command</label><input type="text" id="depStart" placeholder="npm start"/></div>
@@ -77,6 +77,14 @@
 let user = null;
 const BASE = location.hostname;
 
+function togglePortField() {
+  const runtime = document.getElementById('depRuntime').value;
+  const group = document.getElementById('depPortGroup');
+  const input = document.getElementById('depPort');
+  group.style.display = runtime === 'auto' ? 'none' : '';
+  input.placeholder = runtime === 'auto' ? 'Auto-detected' : 'Optional override';
+}
+
 async function init() {
   user = await checkAuth('/');
   if (!user || user.status !== 'active') return window.location.href = user?.status === 'pending' ? '/pending.html' : '/';
@@ -85,7 +93,18 @@ async function init() {
   initSidebar();
   await loadDeps();
   updateNotifBadge();
-  if (new URLSearchParams(location.search).get('new')) modal.open('newDepModal');
+
+  // Prefill deployment details from the selected GitHub repository.
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('new')) {
+    document.getElementById('depRepo').value = params.get('repo') || '';
+    document.getElementById('depBranch').value = params.get('branch') || 'main';
+    document.getElementById('depName').value = params.get('name') || '';
+    document.getElementById('depSubdomain').value = params.get('subdomain') || '';
+
+    modal.open('newDepModal');
+  }
 }
 
 async function loadDeps() {
@@ -123,7 +142,7 @@ async function createDep() {
       subdomain: document.getElementById('depSubdomain').value.trim().toLowerCase(),
       github_repo: document.getElementById('depRepo').value.trim() || null,
       github_branch: document.getElementById('depBranch').value.trim() || 'main',
-      port: parseInt(document.getElementById('depPort').value) || 3000,
+      port: document.getElementById('depRuntime').value === 'auto' ? null : (parseInt(document.getElementById('depPort').value) || null),
       build_command: document.getElementById('depBuild').value.trim() || null,
       start_command: document.getElementById('depStart').value.trim() || null,
       ram_limit_mb: parseInt(document.getElementById('depRam').value) || 128,

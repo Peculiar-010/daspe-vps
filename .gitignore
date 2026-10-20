@@ -18,3 +18,17 @@ npm-debug.log*
 
 # Operating system files
 .DS_Store
+
+# Local deployment data and uploaded project files
+/deployments-data/
+
+# Timestamped and temporary backup files
+*.backup*
+*.bak
+*.bak-*
+*.tmp
+
+# Local environment and secret files
+.env
+.env.*
+!.env.example

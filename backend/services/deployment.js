@@ -32,6 +32,130 @@ const appendBuildLog = async (buildId, line) => {
   );
 };
 
+
+const detectProject = async (srcPath, deployment) => {
+  const exists = async (name) => {
+    try {
+      await fs.access(path.join(srcPath, name));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const readJson = async (name) => {
+    try {
+      return JSON.parse(await fs.readFile(path.join(srcPath, name), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+
+  // Respect an explicitly selected runtime.
+  if (deployment.runtime && deployment.runtime !== 'auto') {
+    return deployment;
+  }
+
+  const pkg = await readJson('package.json');
+
+  if (pkg) {
+    const scripts = pkg.scripts || {};
+    const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+
+    deployment.detectedFramework =
+      deps.vite ? 'vite' :
+      deps.next ? 'nextjs' :
+      deps['@angular/core'] ? 'angular' :
+      deps.react ? 'react' :
+      deps.vue ? 'vue' : 'node';
+
+    if (await exists('bun.lock') || await exists('bun.lockb')) {
+      deployment.runtime = 'bun';
+    } else {
+      deployment.runtime = 'node';
+    }
+
+    if (deployment.detectedFramework === 'vite') {
+      deployment.runtime = 'static';
+      deployment.port = 8080;
+      deployment.build_command = null;
+      deployment.start_command = null;
+      return deployment;
+    }
+
+    deployment.build_command =
+      deployment.build_command || (scripts.build ? 'npm run build' : 'npm install');
+
+    deployment.start_command =
+      deployment.start_command ||
+      (scripts.start ? 'npm start' :
+       scripts['start:prod'] ? 'npm run start:prod' : null);
+
+    deployment.port = Number(deployment.port) || 3000;
+    return deployment;
+  }
+
+  if (await exists('requirements.txt') || await exists('pyproject.toml') ||
+      await exists('Pipfile')) {
+    deployment.runtime = 'python';
+    deployment.build_command = deployment.build_command ||
+      (await exists('requirements.txt') ? 'pip install -r requirements.txt' : '');
+    deployment.start_command = deployment.start_command ||
+      (await exists('main.py') ? 'python main.py' :
+       await exists('app.py') ? 'python app.py' : null);
+    deployment.port = Number(deployment.port) || 8000;
+    return deployment;
+  }
+
+  if (await exists('composer.json') || await exists('index.php')) {
+    deployment.runtime = 'php';
+    deployment.port = Number(deployment.port) || 80;
+    return deployment;
+  }
+
+  if (await exists('go.mod')) {
+    deployment.runtime = 'go';
+    deployment.build_command = deployment.build_command || 'go build -o app .';
+    deployment.start_command = deployment.start_command || './app';
+    deployment.port = Number(deployment.port) || 8080;
+    return deployment;
+  }
+
+  if (await exists('Cargo.toml')) {
+    deployment.runtime = 'rust';
+    deployment.build_command = deployment.build_command || 'cargo build --release';
+    deployment.start_command = deployment.start_command || './target/release/app';
+    deployment.port = Number(deployment.port) || 8080;
+    return deployment;
+  }
+
+  if (await exists('pom.xml') || await exists('build.gradle') ||
+      await exists('build.gradle.kts')) {
+    deployment.runtime = 'java';
+    deployment.port = Number(deployment.port) || 8080;
+    return deployment;
+  }
+
+  if (await exists('Gemfile')) {
+    deployment.runtime = 'ruby';
+    deployment.build_command = deployment.build_command || 'bundle install';
+    deployment.start_command = deployment.start_command ||
+      (await exists('app.rb') ? 'ruby app.rb' : null);
+    deployment.port = Number(deployment.port) || 4567;
+    return deployment;
+  }
+
+  if (await exists('index.html') || await exists('public/index.html')) {
+    deployment.runtime = 'static';
+    deployment.port = 8080;
+    return deployment;
+  }
+
+  throw new Error(
+    'Could not automatically detect this project. Select its runtime manually or provide a Dockerfile.'
+  );
+};
+
 const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commitMessage = null) => {
   const depResult = await query(
     `SELECT d.*, u.github_username, u.github_email, u.id as uid,
@@ -66,6 +190,9 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
   const deployPath = path.join(DEPLOYMENTS_PATH, deploymentId);
   const srcPath = path.join(deployPath, 'src');
 
+  // Track resources created by this attempt for failure cleanup.
+  let startedContainer = false;
+
   try {
     await appendBuildLog(buildId, `[${new Date().toISOString()}] Starting build...`);
 
@@ -86,6 +213,29 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
       await appendBuildLog(buildId, 'Repository ready.');
     }
 
+    // Detect project type after the repository has been fetched.
+    await detectProject(srcPath, deployment);
+
+    // Persist the detected configuration before building the image.
+    await query(
+      `UPDATE deployments
+       SET runtime = $1, port = $2, build_command = $3, start_command = $4
+       WHERE id = $5`,
+      [
+        deployment.runtime,
+        deployment.port ?? null,
+        deployment.build_command ?? null,
+        deployment.start_command ?? null,
+        deploymentId
+      ]
+    );
+
+    await appendBuildLog(
+      buildId,
+      `Detected runtime: ${deployment.runtime}` +
+        (deployment.detectedFramework ? `; framework: ${deployment.detectedFramework}` : '')
+    );
+
     // Enforce storage limit check
     const { storageMb } = await getDirSize(srcPath);
     if (storageMb > deployment.storage_limit_mb) {
@@ -95,8 +245,10 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
     // Get decrypted env vars
     const envVars = await getDecryptedEnvVars(deploymentId);
 
-    // Copy src to build context
+    // Recreate the build context to prevent stale artifacts from previous builds.
+    // The original source directory remains untouched.
     const buildPath = path.join(deployPath, 'build');
+    await fs.rm(buildPath, { recursive: true, force: true });
     await fs.mkdir(buildPath, { recursive: true });
     await copyDir(srcPath, buildPath);
 
@@ -115,7 +267,6 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
       const proc = spawn('docker', [
         'build', '-t', imageName,
         '--memory', `${deployment.ram_limit_mb}m`,
-        '--network', 'none', // no network during build
         buildPath
       ]);
 
@@ -135,17 +286,20 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
 
     // Start container
     const { containerIp, port } = await dockerService.startContainer(deployment, imageName, envVars);
+    startedContainer = true;
 
-    // Update Caddy routing
-    const domain = deployment.custom_domain || `${deployment.subdomain}.${process.env.BASE_DOMAIN}`;
-    await updateCaddyRoute(domain, containerIp, port, deploymentId);
-
-    // Update deployment record
+    // Save the running deployment before generating its Caddy route.
     await query(
-      `UPDATE deployments SET status = 'running', container_id = $1, image_name = $2, deployed_at = NOW()
-       WHERE id = $3`,
-      [`daspe-${deploymentId}`, imageName, deploymentId]
+      `UPDATE deployments
+       SET status = 'running', container_id = $1, image_name = $2,
+           port = $3, deployed_at = NOW()
+       WHERE id = $4`,
+      [`daspe-${deploymentId}`, imageName, port, deploymentId]
     );
+
+    // Register the domain and refresh Caddy.
+    const domain = deployment.custom_domain || `${deployment.subdomain}.${process.env.BASE_DOMAIN || 'daspe.name.ng'}`;
+    await updateCaddyRoute(domain, containerIp, port, deploymentId);
 
     // Update build record
     await query(
@@ -167,6 +321,21 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
     return { success: true, buildId, domain };
   } catch (err) {
     await appendBuildLog(buildId, `\n❌ Build failed: ${err.message}`);
+
+    // Stop/remove a container created by this attempt if a later step fails.
+    // Do not let cleanup errors hide the original deployment error.
+    if (startedContainer) {
+      try {
+        await dockerService.removeContainer(deploymentId);
+        await appendBuildLog(buildId, 'Cleaned up container after deployment failure.');
+      } catch (cleanupErr) {
+        await appendBuildLog(
+          buildId,
+          `Warning: container cleanup failed: ${cleanupErr.message}`
+        );
+      }
+    }
+
     await query(
       `UPDATE deployments SET status = 'failed' WHERE id = $1`,
       [deploymentId]
@@ -200,8 +369,20 @@ const getDirSize = async (dirPath) => {
 };
 
 const copyDir = async (src, dest) => {
-  const { execSync } = require('child_process');
-  execSync(`cp -r "${src}/." "${dest}/"`);
+  // Copy project files without copying Git metadata into Docker build contexts.
+  // fs.cp avoids shell interpolation and preserves the source repository.
+  await fs.cp(src, dest, {
+    recursive: true,
+    force: true,
+    filter: (source) => {
+      const relative = path.relative(src, source);
+      if (!relative) return true;
+
+      return !relative.split(path.sep).some((part) =>
+        part === '.git' || part === 'node_modules'
+      );
+    }
+  });
 };
 
 const stopDeployment = async (deploymentId) => {
