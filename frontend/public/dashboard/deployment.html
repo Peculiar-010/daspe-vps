@@ -366,18 +366,117 @@ async function deleteDeployment() {
   try { await api.del(`/api/deployments/${depId}`); toast.success('Deployment deleted'); setTimeout(() => window.location.href = '/dashboard/deployments.html', 1000); } catch(e) { toast.error(e.message); }
 }
 
+async function loadSavedLogsIntoViewer(box, reason = '') {
+  if (!box || box.dataset.loadingSavedLogs === 'true') return;
+  box.dataset.loadingSavedLogs = 'true';
+
+  try {
+    const builds = await api.get(`/api/deployments/${depId}/builds`);
+    if (!Array.isArray(builds) || builds.length === 0) {
+      box.textContent += '\n[No saved build logs are available yet.]';
+      return;
+    }
+
+    // Check newest builds first; use the first one with saved output.
+    const ordered = [...builds].sort((a, b) =>
+      new Date(b.started_at || 0) - new Date(a.started_at || 0)
+    );
+
+    let foundLogs = '';
+    for (const build of ordered.slice(0, 5)) {
+      try {
+        const result = await api.get(
+          `/api/deployments/${depId}/builds/${build.id}/logs`
+        );
+        if (result && typeof result.logs === 'string' && result.logs.trim()) {
+          foundLogs = result.logs;
+          break;
+        }
+      } catch (_) {
+        // Continue to the next recent build if one log request fails.
+      }
+    }
+
+    if (foundLogs) {
+      box.textContent =
+        `[Showing saved build/deployment diagnostics${reason ? ` — ${reason}` : ''}]\n\n` +
+        foundLogs;
+    } else {
+      box.textContent += '\n[No saved output was found in the five most recent builds.]';
+    }
+  } catch (error) {
+    box.textContent += `\n[Could not load saved logs: ${error.message || 'request failed'}]`;
+  } finally {
+    box.dataset.loadingSavedLogs = 'false';
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
 function startLogs() {
   const box = document.getElementById('liveLogBox');
   if (!box) return;
-  if (logStream) logStream.close();
-  box.textContent = 'Connecting...';
-  logStream = new EventSource(`/api/deployments/${depId}/logs`);
-  logStream.onmessage = e => {
-    const d = JSON.parse(e.data);
-    box.textContent += d.log;
-    box.scrollTop = box.scrollHeight;
+
+  if (logStream) {
+    logStream.close();
+    logStream = null;
+  }
+
+  box.textContent = 'Connecting to live container logs...';
+  box.dataset.loadingSavedLogs = 'false';
+
+  let receivedOutput = false;
+  let fallbackStarted = false;
+
+  // Don't leave the viewer waiting forever when the container has no output.
+  const logConnectionTimeout = setTimeout(() => {
+    if (!receivedOutput && !fallbackStarted) {
+      fallbackToSavedLogs('no live output received within 5 seconds');
+    }
+  }, 5000);
+
+  const fallbackToSavedLogs = (reason) => {
+    if (fallbackStarted) return;
+    fallbackStarted = true;
+
+    clearTimeout(logConnectionTimeout);
+
+    if (logStream) {
+      logStream.close();
+      logStream = null;
+    }
+
+    if (!receivedOutput) {
+      box.textContent = `Live logs unavailable (${reason}). Loading saved logs...`;
+      loadSavedLogsIntoViewer(box, reason);
+    } else {
+      box.textContent += `\n[Live log connection lost: ${reason}. Existing output is preserved.]`;
+    }
   };
-  logStream.onerror = () => { box.textContent += '\n[Connection lost — click Reconnect]'; };
+
+  try {
+    logStream = new EventSource(`/api/deployments/${depId}/logs`);
+
+    logStream.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (typeof data.log === 'string') {
+          if (!receivedOutput) box.textContent = '';
+          receivedOutput = true;
+          clearTimeout(logConnectionTimeout);
+          box.textContent += data.log;
+          box.scrollTop = box.scrollHeight;
+        }
+      } catch (_) {
+        // Ignore malformed events instead of breaking the log viewer.
+      }
+    };
+
+    logStream.onerror = () => {
+      fallbackToSavedLogs('container stream disconnected or unavailable');
+    };
+  } catch (error) {
+    fallbackToSavedLogs(error.message || 'could not connect');
+  }
 }
 
 

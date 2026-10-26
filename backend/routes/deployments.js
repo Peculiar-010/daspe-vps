@@ -427,17 +427,38 @@ router.get('/:id/logs', requireApproved, requireDeploymentOwner, async (req, res
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
+  let stream = null;
+
   const sendEvent = (data) => {
+    if (res.destroyed || res.writableEnded) return;
+
     res.write(`data: ${JSON.stringify({ log: data })}\n\n`);
   };
 
+  const closeStream = () => {
+    if (stream && !stream.destroyed) {
+      stream.destroy();
+    }
+  };
+
+  // The response lifecycle determines when the SSE client disconnects.
+  res.on('close', closeStream);
+
   sendEvent('[System] Connecting to container logs...\n');
 
-  const stream = await dockerService.streamContainerLogs(req.params.id, sendEvent);
+  try {
+    stream = await dockerService.streamContainerLogs(req.params.id, sendEvent);
 
-  req.on('close', () => {
-    if (stream) stream.destroy();
-  });
+    // The client might disconnect while the Docker stream is being opened.
+    if (res.destroyed || res.writableEnded) {
+      closeStream();
+    }
+  } catch (err) {
+    sendEvent(`[ERROR] Unable to open runtime logs: ${err.message}`);
+    if (!res.destroyed && !res.writableEnded) {
+      res.end();
+    }
+  }
 });
 
 // Get stats

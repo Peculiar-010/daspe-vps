@@ -235,6 +235,101 @@ const startContainer = async (deployment, imageName, envVars = {}) => {
 
   await container.start();
 
+  // Validate bot startup without changing website startup behavior.
+  // Detect an early process exit or restart and include diagnostic output.
+  if (deployment.type === 'bot') {
+    const startupWindowMs = 4000;
+    const pollIntervalMs = 500;
+    let startupInfo = await container.inspect();
+    let previousRestartCount = startupInfo.RestartCount || 0;
+    let consecutiveRestartIncreases = 0;
+    let restartDetected = false;
+
+    for (let elapsed = 0; elapsed < startupWindowMs; elapsed += pollIntervalMs) {
+      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+      startupInfo = await container.inspect();
+
+      const currentRestartCount = startupInfo.RestartCount || 0;
+
+      if (currentRestartCount > previousRestartCount) {
+        restartDetected = true;
+        consecutiveRestartIncreases += currentRestartCount - previousRestartCount;
+      }
+
+      previousRestartCount = currentRestartCount;
+
+      if (!startupInfo.State?.Running || consecutiveRestartIncreases >= 2) {
+        break;
+      }
+    }
+
+    // Allow one restart if the bot recovers; flag repeated restarts or an exited process.
+    if (
+      !startupInfo?.State?.Running ||
+      consecutiveRestartIncreases >= 2
+    ) {
+      let output = '';
+
+      try {
+        const logs = await container.logs({
+          stdout: true,
+          stderr: true,
+          tail: 40,
+          timestamps: true
+        });
+
+        output = decodeDockerLogBuffer(logs);
+      } catch (logError) {
+        output = `Unable to retrieve container output: ${logError.message}`;
+      }
+
+      // Redact known environment-variable values before recording diagnostics.
+      for (const value of Object.values(envVars || {})) {
+        if (value === undefined || value === null) continue;
+
+        const secret = String(value);
+        if (secret.length >= 4) {
+          output = output.split(secret).join('[REDACTED]');
+        }
+      }
+
+      output = output
+        .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+        .split('\n')
+        .slice(-30)
+        .join('\n')
+        .trim()
+        .slice(-4000);
+
+      const state = startupInfo?.State || {};
+      const details = [
+        `status=${state.Status || 'unknown'}`,
+        `exit_code=${state.ExitCode ?? 'unknown'}`,
+        `restart_count=${startupInfo?.RestartCount ?? 0}`
+      ];
+
+      if (state.Error) {
+        details.push(`docker_error=${state.Error}`);
+      }
+
+      const failureReason = restartDetected
+        ? 'The container restarted during its initial startup window, indicating that its process may have crashed.'
+        : 'The process exited during its initial startup window.';
+
+      const message =
+        `Bot startup check failed (${details.join(', ')}). ` +
+        failureReason +
+        (output
+          ? `\nRecent container output:\n${output}`
+          : '\nNo container output was available. Check the entry point, start command, dependencies, and required environment variables.');
+
+      // Remove only this newly created container after capturing its logs.
+      await container.remove({ force: true }).catch(() => {});
+
+      throw new Error(message);
+    }
+  }
+
   // Get container info for IP
   const info = await container.inspect();
   const containerIp = info.NetworkSettings.Networks['daspe-net']?.IPAddress;
@@ -283,11 +378,113 @@ const getContainerStats = async (deploymentId) => {
   }
 };
 
+// Decode Docker's multiplexed stdout/stderr frames.
+// Containers using TTY mode may return plain, unframed text instead.
+const decodeDockerLogBuffer = (logs) => {
+  if (!Buffer.isBuffer(logs)) return String(logs || '');
+
+  const chunks = [];
+  let offset = 0;
+
+  while (offset < logs.length) {
+    if (offset + 8 > logs.length) return logs.toString('utf8');
+
+    const streamType = logs[offset];
+    const frameLength = logs.readUInt32BE(offset + 4);
+
+    if (
+      ![0, 1, 2].includes(streamType) ||
+      offset + 8 + frameLength > logs.length
+    ) {
+      return logs.toString('utf8');
+    }
+
+    chunks.push(logs.subarray(offset + 8, offset + 8 + frameLength));
+    offset += 8 + frameLength;
+  }
+
+  return Buffer.concat(chunks).toString('utf8');
+};
+
+// Incrementally decode live output because a Docker frame can arrive
+// across multiple data events.
+const createDockerLogDecoder = (callback) => {
+  let pending = Buffer.alloc(0);
+  let mode = 'unknown';
+
+  const write = (chunk) => {
+    if (!Buffer.isBuffer(chunk)) chunk = Buffer.from(chunk);
+
+    if (mode === 'raw') {
+      if (chunk.length) callback(chunk.toString('utf8'));
+      return;
+    }
+
+    pending = Buffer.concat([pending, chunk]);
+
+    if (mode === 'unknown') {
+      if (pending.length < 8) return;
+
+      const streamType = pending[0];
+
+      if (![0, 1, 2].includes(streamType)) {
+        mode = 'raw';
+        callback(pending.toString('utf8'));
+        pending = Buffer.alloc(0);
+        return;
+      }
+
+      mode = 'framed';
+    }
+
+    while (pending.length >= 8) {
+      const streamType = pending[0];
+      const frameLength = pending.readUInt32BE(4);
+
+      if (![0, 1, 2].includes(streamType)) {
+        mode = 'raw';
+        callback(pending.toString('utf8'));
+        pending = Buffer.alloc(0);
+        return;
+      }
+
+      const totalLength = 8 + frameLength;
+      if (pending.length < totalLength) return;
+
+      const payload = pending.subarray(8, totalLength);
+      if (payload.length) callback(payload.toString('utf8'));
+
+      pending = pending.subarray(totalLength);
+    }
+  };
+
+  const end = () => {
+    if (!pending.length) return;
+
+    // Preserve any remaining plain text, but don't emit binary frame headers.
+    if (mode === 'unknown') {
+      callback(pending.toString('utf8'));
+    } else if (mode === 'raw') {
+      callback(pending.toString('utf8'));
+    }
+
+    pending = Buffer.alloc(0);
+  };
+
+  return { write, end };
+};
+
 const getContainerLogs = async (deploymentId, tail = 100) => {
   try {
     const container = docker.getContainer(`daspe-${deploymentId}`);
-    const logs = await container.logs({ stdout: true, stderr: true, tail, timestamps: true });
-    return logs.toString('utf8');
+    const logs = await container.logs({
+      stdout: true,
+      stderr: true,
+      tail,
+      timestamps: true
+    });
+
+    return decodeDockerLogBuffer(logs);
   } catch {
     return '';
   }
@@ -297,10 +494,19 @@ const streamContainerLogs = async (deploymentId, callback) => {
   try {
     const container = docker.getContainer(`daspe-${deploymentId}`);
     const stream = await container.logs({
-      stdout: true, stderr: true, follow: true, timestamps: true, tail: 50
+      stdout: true,
+      stderr: true,
+      follow: true,
+      timestamps: true,
+      tail: 50
     });
-    stream.on('data', (chunk) => callback(chunk.toString('utf8')));
+
+    const decoder = createDockerLogDecoder(callback);
+
+    stream.on('data', decoder.write);
+    stream.on('end', decoder.end);
     stream.on('error', (err) => callback(`[ERROR] ${err.message}`));
+
     return stream;
   } catch (err) {
     callback(`[ERROR] ${err.message}`);

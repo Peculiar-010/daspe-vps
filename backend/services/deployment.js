@@ -7,7 +7,7 @@ const { decrypt } = require('../utils/encryption');
 const dockerService = require('./docker');
 const webpush = require('./webpush');
 const telegram = require('./telegram');
-const { updateCaddyRoute } = require('./caddy');
+const { updateCaddyRoute, removeCaddyRoute } = require('./caddy');
 const { v4: uuidv4 } = require('uuid');
 
 const DEPLOYMENTS_PATH = process.env.DEPLOYMENTS_PATH || '/home/ubuntu/daspe/deployments-data';
@@ -75,7 +75,9 @@ const detectProject = async (srcPath, deployment) => {
       deployment.runtime = 'node';
     }
 
-    if (deployment.detectedFramework === 'vite') {
+    // Bots may include Vite or HTML for a pairing/control interface.
+    // Do not silently convert bot deployments into static websites.
+    if (deployment.detectedFramework === 'vite' && deployment.type !== 'bot') {
       deployment.runtime = 'static';
       deployment.port = 8080;
       deployment.build_command = null;
@@ -145,7 +147,10 @@ const detectProject = async (srcPath, deployment) => {
     return deployment;
   }
 
-  if (await exists('index.html') || await exists('public/index.html')) {
+  if (
+    deployment.type !== 'bot' &&
+    (await exists('index.html') || await exists('public/index.html'))
+  ) {
     deployment.runtime = 'static';
     deployment.port = 8080;
     return deployment;
@@ -262,23 +267,93 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
 
     const imageName = `daspe-dep-${deploymentId}:latest`;
 
-    // Build image using docker build
+    // Build the image and serialize log writes so all output is saved
+    // before this step resolves or rejects.
     await new Promise((resolve, reject) => {
+      let logQueue = Promise.resolve();
+      let settled = false;
+
+      const queueLog = (data) => {
+        const output = data.toString();
+        logQueue = logQueue.then(() => appendBuildLog(buildId, output));
+        return logQueue;
+      };
+
+      let buildOutput = '';
       const proc = spawn('docker', [
         'build', '-t', imageName,
         '--memory', `${deployment.ram_limit_mb}m`,
         buildPath
-      ]);
+      ], {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
 
-      proc.stdout.on('data', async (data) => {
-        await appendBuildLog(buildId, data.toString());
+      proc.stdout.on('data', (data) => {
+        buildOutput = (buildOutput + data.toString()).slice(-12000);
+        queueLog(data).catch((err) => {
+          if (!settled) {
+            settled = true;
+            proc.kill();
+            reject(new Error(`Failed to save Docker build output: ${err.message}`));
+          }
+        });
       });
-      proc.stderr.on('data', async (data) => {
-        await appendBuildLog(buildId, data.toString());
+
+      proc.stderr.on('data', (data) => {
+        buildOutput = (buildOutput + data.toString()).slice(-12000);
+        queueLog(data).catch((err) => {
+          if (!settled) {
+            settled = true;
+            proc.kill();
+            reject(new Error(`Failed to save Docker build output: ${err.message}`));
+          }
+        });
       });
-      proc.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`Build failed with exit code ${code}`));
+
+      proc.on('error', (err) => {
+        if (settled) return;
+        settled = true;
+
+        logQueue
+          .then(() => appendBuildLog(buildId, `Could not start Docker build process: ${err.message}`))
+          .catch(() => {})
+          .finally(() => reject(
+            new Error(`Could not start Docker build process: ${err.message}`)
+          ));
+      });
+
+      proc.on('close', (code, signal) => {
+        if (settled) return;
+
+        logQueue
+          .then(() => {
+            if (settled) return;
+            settled = true;
+
+            if (code === 0) {
+              resolve();
+            } else {
+              const reason = signal
+                ? `Build process terminated by signal ${signal}`
+                : `Build failed with exit code ${code}`;
+              const outputTail = buildOutput
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean)
+                .slice(-12)
+                .join('\n')
+                .slice(-3000);
+
+              reject(new Error(
+                `${reason}${outputTail ? `\nRecent Docker build output:\n${outputTail}` : ''}`
+              ));
+            }
+          })
+          .catch((err) => {
+            if (settled) return;
+            settled = true;
+            reject(new Error(`Failed to save Docker build output: ${err.message}`));
+          });
       });
     });
 
@@ -297,9 +372,20 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
       [`daspe-${deploymentId}`, imageName, port, deploymentId]
     );
 
-    // Register the domain and refresh Caddy.
-    const domain = deployment.custom_domain || `${deployment.subdomain}.${process.env.BASE_DOMAIN || 'daspe.name.ng'}`;
-    await updateCaddyRoute(domain, containerIp, port, deploymentId);
+    // Background bots do not receive a public HTTP route by default.
+    // Websites and APIs retain their existing public-domain behavior.
+    let domain = null;
+
+    if (deployment.type === 'bot') {
+      await removeCaddyRoute(deploymentId);
+      await appendBuildLog(
+        buildId,
+        'Bot is running without a public HTTP route.'
+      );
+    } else {
+      domain = deployment.custom_domain || `${deployment.subdomain}.${process.env.BASE_DOMAIN || 'daspe.name.ng'}`;
+      await updateCaddyRoute(domain, containerIp, port, deploymentId);
+    }
 
     // Update build record
     await query(
@@ -307,20 +393,32 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
       [imageName, buildId]
     );
 
-    await appendBuildLog(buildId, `\n✅ Deployment successful! Running at https://${domain}`);
+    const successMessage = domain
+      ? `\n✅ Deployment successful! Running at https://${domain}`
+      : '\n✅ Bot deployment successful! The process is running without a public HTTP route.';
 
-    // Notify user
+    await appendBuildLog(buildId, successMessage);
+
+    // Notify the user without inventing a public URL for background bots.
     await webpush.notifyUser(
       deployment.user_id,
       '✅ Deployment Successful',
-      `${deployment.name} is now live at https://${domain}`,
+      domain
+        ? `${deployment.name} is now live at https://${domain}`
+        : `${deployment.name} deployed successfully and is running as a background bot.`,
       'success',
       deploymentId
     );
 
     return { success: true, buildId, domain };
   } catch (err) {
-    await appendBuildLog(buildId, `\n❌ Build failed: ${err.message}`);
+    const failureMessage = String(err?.message || 'Unknown deployment error');
+
+    // Persist the original diagnostic output before cleanup or status updates.
+    await appendBuildLog(
+      buildId,
+      `\n❌ Deployment failed: ${failureMessage}`
+    );
 
     // Stop/remove a container created by this attempt if a later step fails.
     // Do not let cleanup errors hide the original deployment error.
@@ -345,10 +443,27 @@ const deploy = async (deploymentId, trigger = 'manual', commitSha = null, commit
       [buildId]
     );
 
+    const errorText = failureMessage;
+    const outputMatch = errorText.match(/Recent (?:container|Docker build) output:\n([\s\S]*)$/);
+
+    // Keep the useful error headline and a few recent diagnostic lines.
+    const diagnosticSource = outputMatch ? outputMatch[1] : errorText;
+    const diagnosticLines = diagnosticSource
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    const diagnostic = diagnosticLines.slice(-4).join(' | ');
+    const notificationError = (
+      diagnostic
+        ? `Deployment failed: ${diagnostic}`
+        : 'Deployment failed. Open the deployment build logs for details.'
+    ).slice(0, 240);
+
     await webpush.notifyUser(
       deployment.user_id,
       '❌ Deployment Failed',
-      `${deployment.name} failed to deploy: ${err.message}`,
+      `${deployment.name} failed to deploy: ${notificationError}`,
       'error',
       deploymentId
     );
