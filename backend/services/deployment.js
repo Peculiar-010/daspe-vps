@@ -51,16 +51,28 @@ const detectProject = async (srcPath, deployment) => {
     }
   };
 
-  // Respect an explicitly selected runtime.
-  if (deployment.runtime && deployment.runtime !== 'auto') {
-    return deployment;
-  }
+  // Inspect project files even when the user explicitly selects a runtime.
+  // Explicit runtime selection wins, but it must not skip command detection.
+  const explicitRuntime =
+    deployment.runtime && deployment.runtime !== 'auto'
+      ? deployment.runtime
+      : null;
 
   const pkg = await readJson('package.json');
 
-  if (pkg) {
-    const scripts = pkg.scripts || {};
-    const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+  // Handle Node.js/Bun projects with or without package.json.
+  if (explicitRuntime === 'node' || explicitRuntime === 'bun' || pkg) {
+    const scripts = pkg?.scripts || {};
+    const deps = {
+      ...(pkg?.dependencies || {}),
+      ...(pkg?.devDependencies || {})
+    };
+
+    deployment.runtime =
+      explicitRuntime ||
+      ((await exists('bun.lock')) || (await exists('bun.lockb'))
+        ? 'bun'
+        : 'node');
 
     deployment.detectedFramework =
       deps.vite ? 'vite' :
@@ -69,15 +81,14 @@ const detectProject = async (srcPath, deployment) => {
       deps.react ? 'react' :
       deps.vue ? 'vue' : 'node';
 
-    if (await exists('bun.lock') || await exists('bun.lockb')) {
-      deployment.runtime = 'bun';
-    } else {
-      deployment.runtime = 'node';
-    }
-
-    // Bots may include Vite or HTML for a pairing/control interface.
-    // Do not silently convert bot deployments into static websites.
-    if (deployment.detectedFramework === 'vite' && deployment.type !== 'bot') {
+    // A regular Vite website can be served as static files.
+    // Bot deployments must retain their application runtime.
+    if (
+      pkg &&
+      deployment.detectedFramework === 'vite' &&
+      deployment.type !== 'bot' &&
+      !explicitRuntime
+    ) {
       deployment.runtime = 'static';
       deployment.port = 8080;
       deployment.build_command = null;
@@ -85,16 +96,157 @@ const detectProject = async (srcPath, deployment) => {
       return deployment;
     }
 
-    deployment.build_command =
-      deployment.build_command || (scripts.build ? 'npm run build' : 'npm install');
+    const hasPackageJson = Boolean(pkg);
 
-    deployment.start_command =
-      deployment.start_command ||
-      (scripts.start ? 'npm start' :
-       scripts['start:prod'] ? 'npm run start:prod' : null);
+    if (!deployment.build_command) {
+      deployment.build_command = hasPackageJson
+        ? (scripts.build ? 'npm run build' : 'npm install')
+        : '';
+    }
+
+    if (!deployment.start_command) {
+      if (scripts.start) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run start' : 'npm start';
+      } else if (scripts['start:prod']) {
+        deployment.start_command =
+          deployment.runtime === 'bun'
+            ? 'bun run start:prod'
+            : 'npm run start:prod';
+      } else if (await exists('bot.js')) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run bot.js' : 'node bot.js';
+      } else if (await exists('index.js')) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run index.js' : 'node index.js';
+      } else if (await exists('main.js')) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run main.js' : 'node main.js';
+      } else if (await exists('app.js')) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run app.js' : 'node app.js';
+      } else if (await exists('server.js')) {
+        deployment.start_command =
+          deployment.runtime === 'bun' ? 'bun run server.js' : 'node server.js';
+      } else {
+        // Support custom entry filenames such as test.js when the repository
+        // contains exactly one top-level JavaScript entry candidate.
+        const ignoredEntries = new Set([
+          'config.js', 'eslint.config.js', 'postcss.config.js',
+          'tailwind.config.js', 'vite.config.js', 'next.config.js',
+          'webpack.config.js', 'rollup.config.js', 'gulpfile.js',
+          'gruntfile.js'
+        ]);
+
+        let jsFiles = [];
+        try {
+          jsFiles = (await fs.readdir(srcPath, { withFileTypes: true }))
+            .filter(entry =>
+              entry.isFile() &&
+              entry.name.endsWith('.js') &&
+              !entry.name.startsWith('.') &&
+              !ignoredEntries.has(entry.name)
+            )
+            .map(entry => entry.name);
+        } catch (_) {}
+
+        if (jsFiles.length === 1) {
+          const entryPoint = jsFiles[0];
+          deployment.start_command =
+            deployment.runtime === 'bun'
+              ? `bun run ${entryPoint}`
+              : `node ${entryPoint}`;
+        }
+      }
+    }
 
     deployment.port = Number(deployment.port) || 3000;
     return deployment;
+  }
+
+  // Preserve explicitly selected non-JavaScript runtimes while still
+  // detecting their project files and choosing sensible commands.
+  if (explicitRuntime) {
+    deployment.runtime = explicitRuntime;
+
+    if (explicitRuntime === 'static') {
+      deployment.port = Number(deployment.port) || 8080;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'php') {
+      deployment.port = Number(deployment.port) || 80;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'python') {
+      deployment.build_command = deployment.build_command ||
+        (await exists('requirements.txt') ? 'pip install -r requirements.txt' : '');
+      deployment.start_command = deployment.start_command ||
+        (await exists('main.py') ? 'python main.py' :
+         await exists('app.py') ? 'python app.py' : null);
+      deployment.port = Number(deployment.port) || 8000;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'go') {
+      deployment.build_command = deployment.build_command || 'go build -o app .';
+      deployment.start_command = deployment.start_command || './app';
+      deployment.port = Number(deployment.port) || 8080;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'rust') {
+      deployment.build_command = deployment.build_command || 'cargo build --release';
+      deployment.start_command = deployment.start_command || './target/release/app';
+      deployment.port = Number(deployment.port) || 8080;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'ruby') {
+      deployment.build_command = deployment.build_command ||
+        (await exists('Gemfile') ? 'bundle install' : '');
+      deployment.start_command = deployment.start_command ||
+        (await exists('app.rb') ? 'ruby app.rb' : null);
+      deployment.port = Number(deployment.port) || 4567;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'java') {
+      deployment.port = Number(deployment.port) || 8080;
+      return deployment;
+    }
+
+    if (explicitRuntime === 'deno') {
+      deployment.start_command = deployment.start_command ||
+        (await exists('main.ts') ? 'deno run --allow-net --allow-read --allow-env main.ts' :
+         await exists('main.js') ? 'deno run --allow-net --allow-read --allow-env main.js' : null);
+      deployment.port = Number(deployment.port) || 8000;
+      return deployment;
+    }
+  }
+
+  // Detect simple JavaScript bots that have no package.json.
+  // Do not classify ordinary frontend websites as Node.js bots.
+  if (deployment.type === 'bot') {
+    const jsEntryPoints = ['bot.js', 'index.js', 'main.js', 'app.js', 'server.js'];
+    let entryPoint = null;
+
+    for (const candidate of jsEntryPoints) {
+      if (await exists(candidate)) {
+        entryPoint = candidate;
+        break;
+      }
+    }
+
+    if (entryPoint) {
+      deployment.runtime = 'node';
+      deployment.build_command = deployment.build_command || '';
+      deployment.start_command =
+        deployment.start_command || `node ${entryPoint}`;
+      deployment.port = Number(deployment.port) || 3000;
+      return deployment;
+    }
   }
 
   if (await exists('requirements.txt') || await exists('pyproject.toml') ||

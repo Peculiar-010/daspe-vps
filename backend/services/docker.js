@@ -136,6 +136,18 @@ CMD ["nginx", "-g", "daemon off;"]
   }
 
 
+  const startCommand =
+    typeof deployment.start_command === 'string'
+      ? deployment.start_command.trim()
+      : '';
+
+  if (!startCommand) {
+    throw new Error(
+      'No start command detected. Set a Start Command, ' +
+      'or add a valid start script or application entry file.'
+    );
+  }
+
   return `FROM ${config.baseImage}
 
 # Create non-root user for security
@@ -148,7 +160,13 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-${deployment.build_command ? `RUN ${deployment.build_command}` : (config.defaultBuildCommand ? `RUN ${config.defaultBuildCommand}` : '# No build step')}
+${deployment.build_command !== null && deployment.build_command !== undefined
+  ? (String(deployment.build_command).trim()
+      ? `RUN ${deployment.build_command}`
+      : '# No build step')
+  : (config.defaultBuildCommand
+      ? `RUN ${config.defaultBuildCommand}`
+      : '# No build step')}
 
 # Set ownership
 RUN chown -R appuser:appgroup /app
@@ -158,7 +176,7 @@ USER appuser
 
 EXPOSE ${deployment.port || config.defaultPort}
 
-CMD ${JSON.stringify((deployment.start_command || config.defaultStartCommand).split(' '))}
+CMD ${JSON.stringify(startCommand.split(' '))}
 `;
 };
 

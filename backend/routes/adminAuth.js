@@ -50,8 +50,13 @@ router.post('/admin-totp-setup', checkAdminIdentity, async (req, res) => {
     // Save secret temporarily in session until confirmed
     req.session.pendingTotpSecret = secret.base32;
 
+    // Persist the pending setup secret before returning it.
+    await new Promise((resolve, reject) => {
+      req.session.save(err => err ? reject(err) : resolve());
+    });
+
     // Return only the secret key — no QR, user types it manually
-    res.json({ secret: secret.base32 });
+    return res.json({ secret: secret.base32 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -78,7 +83,13 @@ router.post('/admin-totp-confirm', checkAdminIdentity, async (req, res) => {
     req.session.adminVerifiedAt = Date.now();
 
     await audit.log({ userId: req.adminUser.id, action: 'admin_totp_enabled', req });
-    res.json({ success: true });
+
+    // Save the verified session and clear the pending setup secret.
+    await new Promise((resolve, reject) => {
+      req.session.save(err => err ? reject(err) : resolve());
+    });
+
+    return res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -89,7 +100,12 @@ router.post('/admin-signout', checkAdminIdentity, async (req, res) => {
   req.session.adminVerified = false;
   req.session.adminVerifiedAt = null;
   await audit.log({ userId: req.adminUser.id, action: 'admin_logout', req });
-  res.json({ success: true });
+
+  await new Promise((resolve, reject) => {
+    req.session.save(err => err ? reject(err) : resolve());
+  });
+
+  return res.json({ success: true });
 });
 
 module.exports = router;

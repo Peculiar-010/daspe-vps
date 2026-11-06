@@ -32,3 +32,20 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Private configuration and runtime data
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Deployment data and generated files
+/deployments-data/
+node_modules/
+*.log
+*.dump
+*.sql
+*.bak
+*.backup*

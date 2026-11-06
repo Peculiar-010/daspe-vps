@@ -138,7 +138,12 @@ const verifyAdminCredentials = async (req, res) => {
       req
     });
 
-    res.json({ success: true });
+    // Persist the verified admin session before reporting success.
+    await new Promise((resolve, reject) => {
+      req.session.save(err => err ? reject(err) : resolve());
+    });
+
+    return res.json({ success: true });
   } catch (err) {
     console.error('Admin verify error:', err.message);
     res.status(500).json({ error: 'Verification failed' });
